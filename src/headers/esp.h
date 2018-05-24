@@ -159,6 +159,8 @@ public:
     double *diff_d        ;
     double *divg_Mh_d     ;
     bool   *check_d       ;
+
+    double *mixH_d        ; //atomic hydrogen mixing ratio (for very hot planets)
 ///////////////////////////
 
 //  Functions
