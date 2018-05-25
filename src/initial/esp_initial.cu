@@ -235,13 +235,14 @@ __host__ void ESP::InitialValues(bool rest          ,
                 pressure_h[i*nv + lev] = P_Ref*exp(-Altitude_h[lev] / Ha);
                 temperature_h[i*nv + lev] = Tmean;
                 if (hh2recomb) {
+                  double dG, Kprime;
                   dG = 2.1370867596206315e-17*temperature_h[i*nv + lev]*temperature_h[i*nv + lev]*temperature_h[i*nv + lev]*temperature_h[i*nv + lev]*temperature_h[i*nv + lev] +
                          -3.8689132818241159e-13*temperature_h[i*nv + lev]*temperature_h[i*nv + lev]*temperature_h[i*nv + lev]*temperature_h[i*nv + lev] +
                          2.7275438366298867e-09*temperature_h[i*nv + lev]*temperature_h[i*nv + lev]*temperature_h[i*nv + lev] +
                          -9.6170574202103724e-06*temperature_h[i*nv + lev]*temperature_h[i*nv + lev] +
                          -0.043948876890469453*temperature_h[i*nv + lev] +
                          216.81259827590887;
-                  Kprime = exp(-dG/8.3144621/temperature_h[i*nv+lev])*pressure_h[i*nv+lev]/100000;
+                  Kprime = exp(2000*dG/8.3144621/temperature_h[i*nv+lev])*pressure_h[i*nv+lev]/100000;
                   mixH_h[i*nv+lev] = (-1.0+sqrt(1.0+8*Kprime))/(4*Kprime);
                 }
             }

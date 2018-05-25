@@ -205,7 +205,8 @@ public:
                        double,
                        double,
                        double,
-                       double);
+                       double,
+                       bool  );
 
     void Thor(double,
               bool  ,
@@ -234,7 +235,8 @@ public:
                double,
                double,
                double,
-               double);
+               double,
+               bool  );
 
     void CopyToHost();
 

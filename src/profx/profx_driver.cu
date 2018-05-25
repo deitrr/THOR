@@ -47,6 +47,7 @@
 #include "../headers/phy/profx_held_suarez.h"
 #include "../headers/phy/profx_shallowHJ_hs.h"
 #include "../headers/phy/profx_tidalearth_hs.h"
+#include "../headers/phy/profx_H_recomb.h"
 
 __host__ void ESP::ProfX(int    planetnumber, // Planet ID
                          int    nstep       , // Step number
@@ -162,7 +163,7 @@ __host__ void ESP::ProfX(int    planetnumber, // Planet ID
                                     P_Ref        ,
                                     Rd           ,
                                     Cp           ,
-                                    num          );
+                                    point_num          );
       }
     }
 //

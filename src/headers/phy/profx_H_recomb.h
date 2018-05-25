@@ -43,15 +43,15 @@
 #define Runiv 8.3144621
 #define qbond 2.14e8  //hydrogen dissociation energy from Bell & Cowan 2018
 
-__global__ double dGibbs(double temp) {
-  //calculates change in Gibbs free energy for H (polyfit to Heng's Appdx D values)
-  return 2.1370867596206315e-17*temp*temp*temp*temp*temp +
-         -3.8689132818241159e-13*temp*temp*temp*temp +
-         2.7275438366298867e-09*temp*temp*temp +
-         -9.6170574202103724e-06*temp*temp +
-         -0.043948876890469453*temp +
-         216.81259827590887;
-}
+// __global__ void dGibbs(double temp, double *dG) {
+//   //calculates change in Gibbs free energy for H (polyfit to Heng's Appdx D values)
+//   *dG = 2.1370867596206315e-17*temp*temp*temp*temp*temp +
+//          -3.8689132818241159e-13*temp*temp*temp*temp +
+//          2.7275438366298867e-09*temp*temp*temp +
+//          -9.6170574202103724e-06*temp*temp +
+//          -0.043948876890469453*temp +
+//          216.81259827590887;
+// }
 
 __global__ void ComputeMixH(double *temperature_d,
                                      double *pt_d         ,
@@ -68,11 +68,18 @@ __global__ void ComputeMixH(double *temperature_d,
     int nv = gridDim.y;
     int lev = blockIdx.y;
 
-    double dG, Kprime;
+    double dG, Kprime, temp;
 
     if (id < num){
-      dG = dGibbs(temperature_d[id*nv+lev]);
-      Kprime = exp(-dG/Runiv/temperature[id*nv+lev])*pressure_d[id*nv+lev]/100000;
+      // dGibbs<<<1,1>>>(temperature_d[id*nv+lev], dG);
+      temp = temperature_d[id*nv+lev];
+      dG = 2.1370867596206315e-17*temp*temp*temp*temp*temp +
+             -3.8689132818241159e-13*temp*temp*temp*temp +
+             2.7275438366298867e-09*temp*temp*temp +
+             -9.6170574202103724e-06*temp*temp +
+             -0.043948876890469453*temp +
+             216.81259827590887;
+      Kprime = exp(2000*dG/Runiv/temperature_d[id*nv+lev])*pressure_d[id*nv+lev]/100000;
       mixH_d[id*nv+lev] = (-1.0+sqrt(1.0+8*Kprime))/(4*Kprime);
     }
 }
@@ -95,11 +102,18 @@ __global__ void recomb_H(double *Mh_d         ,
     int nv = gridDim.y;
     int lev = blockIdx.y;
 
-    double dG, Kprime, mixH_tmp;
+    double dG, Kprime, mixH_tmp, dT, temp;
 
     if (id < num){
-      dG = dGibbs(temperature_d[id*nv+lev]);
-      Kprime = exp(-dG/Runiv/temperature[id*nv+lev])*pressure_d[id*nv+lev]/100000;
+      // dGibbs<<<1,1>>>(temperature_d[id*nv+lev], dG);
+      temp = temperature_d[id*nv+lev];
+      dG = 2.1370867596206315e-17*temp*temp*temp*temp*temp +
+             -3.8689132818241159e-13*temp*temp*temp*temp +
+             2.7275438366298867e-09*temp*temp*temp +
+             -9.6170574202103724e-06*temp*temp +
+             -0.043948876890469453*temp +
+             216.81259827590887;
+      Kprime = exp(2000*dG/Runiv/temperature_d[id*nv+lev])*pressure_d[id*nv+lev]/100000;
       mixH_tmp = (-1.0+sqrt(1.0+8*Kprime))/(4*Kprime);
       dT = qbond*mixH_tmp/Cp - qbond*mixH_d[id*nv+lev]/Cp;
       temperature_d[id*nv+lev] += dT;
