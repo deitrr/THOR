@@ -115,7 +115,7 @@ __global__ void recomb_H(double *Mh_d         ,
              216.81259827590887;
       Kprime = exp(2000*dG/Runiv/temperature_d[id*nv+lev])*pressure_d[id*nv+lev]/100000;
       mixH_tmp = (-1.0+sqrt(1.0+8*Kprime))/(4*Kprime);
-      dT = qbond*mixH_tmp/Cp - qbond*mixH_d[id*nv+lev]/Cp;
+      dT = -(qbond*mixH_tmp/Cp - qbond*mixH_d[id*nv+lev]/Cp);
       temperature_d[id*nv+lev] += dT;
     }
 }
