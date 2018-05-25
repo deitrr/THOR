@@ -64,10 +64,13 @@
 #define rest   true          // Starting from rest
 
 // Benchmark test
-#define hstest 3          // Held-Suarez test for Earth == 1
+#define hstest 1          // Held-Suarez test for Earth == 1
 //  HS test for shallow hot Jupiter == 3
 //  HS test for tidally locked Earth == 2
 //  No HS test == 0
+
+// H/H2 recombination/dissociation (high temperature planets)
+#define HH2R true
 
 // GPU ID
 #define GPU_ID_N 0        // Set GPU ID number

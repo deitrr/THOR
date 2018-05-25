@@ -41,6 +41,7 @@
 ////////////////////////////////////////////////////////////////////////
 
 #define Runiv 8.3144621
+#define qbond 2.14e8  //hydrogen dissociation energy from Bell & Cowan 2018
 
 __global__ double dGibbs(double temp) {
   //calculates change in Gibbs free energy for H (polyfit to Heng's Appdx D values)
@@ -56,6 +57,7 @@ __global__ void ComputeMixH(double *temperature_d,
                                      double *pt_d         ,
                                      double *pressure_d   ,
                                      double *Rho_d        ,
+                                     double *mixH_d       ,
                                      double  P_Ref        ,
                                      double  Rd           ,
                                      double  Cp           ,
@@ -66,13 +68,14 @@ __global__ void ComputeMixH(double *temperature_d,
     int nv = gridDim.y;
     int lev = blockIdx.y;
 
+    double dG, Kprime;
+
     if (id < num){
       dG = dGibbs(temperature_d[id*nv+lev]);
       Kprime = exp(-dG/Runiv/temperature[id*nv+lev])*pressure_d[id*nv+lev]/100000;
-      mixH[id*nv+lev] = (-1.0+sqrt(1.0+8*Kprime))/(4*Kprime);
+      mixH_d[id*nv+lev] = (-1.0+sqrt(1.0+8*Kprime))/(4*Kprime);
     }
 }
-
 
 __global__ void recomb_H(double *Mh_d         ,
                             double *pressure_d   ,
@@ -92,10 +95,13 @@ __global__ void recomb_H(double *Mh_d         ,
     int nv = gridDim.y;
     int lev = blockIdx.y;
 
+    double dG, Kprime, mixH_tmp;
+
     if (id < num){
-
-
-
-
+      dG = dGibbs(temperature_d[id*nv+lev]);
+      Kprime = exp(-dG/Runiv/temperature[id*nv+lev])*pressure_d[id*nv+lev]/100000;
+      mixH_tmp = (-1.0+sqrt(1.0+8*Kprime))/(4*Kprime);
+      dT = qbond*mixH_tmp/Cp - qbond*mixH_d[id*nv+lev]/Cp;
+      temperature_d[id*nv+lev] += dT;
     }
 }

@@ -108,6 +108,8 @@ __host__ void ESP::AllocData(){
     W_h          = (double*)malloc(nv*point_num   * sizeof(double));
     Wh_h         = (double*)malloc(nvi*point_num  * sizeof(double));
 
+    mixH_h       = (double*)malloc(nv*point_num   * sizeof(double));
+
 //  Allocate data in device
 //  Grid
     cudaMalloc((void **)&point_local_d, 6 * point_num * sizeof(int));
@@ -171,8 +173,6 @@ __host__ void ESP::AllocData(){
     cudaMalloc((void **)&Ws_d          , nv * point_num *     sizeof(double));
     cudaMalloc((void **)&Whs_d         , nvi* point_num *     sizeof(double));
 
-
-
 //  RK-Method
     cudaMalloc((void **)&pressurek_d   , nv * point_num *     sizeof(double));
     cudaMalloc((void **)&Rhok_d        , nv * point_num *     sizeof(double));
@@ -195,7 +195,7 @@ __host__ void ESP::AllocData(){
     cudaMalloc((void **)&diff_d          , 6 * nv * point_num    * sizeof(double));
     cudaMalloc((void **)&divg_Mh_d       , 3 * nv * point_num    * sizeof(double));
 
-//  Mixing ratios 
+//  Mixing ratios
     cudaMalloc((void **)&mixH_d          , nv * point_num *     sizeof(double));
 
 //  Extras-nan
@@ -216,7 +216,8 @@ __host__ void ESP::InitialValues(bool rest          ,
                                  double Tmean       ,
                                  double Mmol        ,
                                  double mu          ,
-                                 double Rd          ){
+                                 double Rd          ,
+                                 bool   hh2recomb   ){
 //
 //  Description:
 //
@@ -233,6 +234,16 @@ __host__ void ESP::InitialValues(bool rest          ,
             for (int lev = 0; lev < nv; lev++ ){
                 pressure_h[i*nv + lev] = P_Ref*exp(-Altitude_h[lev] / Ha);
                 temperature_h[i*nv + lev] = Tmean;
+                if (hh2recomb) {
+                  dG = 2.1370867596206315e-17*temperature_h[i*nv + lev]*temperature_h[i*nv + lev]*temperature_h[i*nv + lev]*temperature_h[i*nv + lev]*temperature_h[i*nv + lev] +
+                         -3.8689132818241159e-13*temperature_h[i*nv + lev]*temperature_h[i*nv + lev]*temperature_h[i*nv + lev]*temperature_h[i*nv + lev] +
+                         2.7275438366298867e-09*temperature_h[i*nv + lev]*temperature_h[i*nv + lev]*temperature_h[i*nv + lev] +
+                         -9.6170574202103724e-06*temperature_h[i*nv + lev]*temperature_h[i*nv + lev] +
+                         -0.043948876890469453*temperature_h[i*nv + lev] +
+                         216.81259827590887;
+                  Kprime = exp(-dG/8.3144621/temperature_h[i*nv+lev])*pressure_h[i*nv+lev]/100000;
+                  mixH_h[i*nv+lev] = (-1.0+sqrt(1.0+8*Kprime))/(4*Kprime);
+                }
             }
 
             for (int lev = 0; lev < nv; lev++ ){
@@ -307,7 +318,7 @@ __host__ void ESP::InitialValues(bool rest          ,
         Kdhz_h[lev] = Diffc*pow(dbar,4.)/timestep_dyn;
     }
 
-//  Copy memory to the devide
+//  Copy memory to the device
     cudaMemcpy(point_local_d, point_local_h, 6 * point_num * sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(maps_d, maps_h, (nl_region + 2)*(nl_region + 2)*nr * sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(Altitude_d , Altitude_h , nv * sizeof(double), cudaMemcpyHostToDevice);
@@ -328,6 +339,9 @@ __host__ void ESP::InitialValues(bool rest          ,
     cudaMemcpy(grad_d,grad_h,7 * 3 * point_num * sizeof(double), cudaMemcpyHostToDevice);
     cudaMemcpy(Kdhz_d      ,Kdhz_h, nv     * sizeof(double), cudaMemcpyHostToDevice);
     cudaMemcpy(Kdh4_d      ,Kdh4_h, nv     * sizeof(double), cudaMemcpyHostToDevice);
+
+    cudaMemcpy(mixH_d, mixH_h, point_num * nv    *     sizeof(double), cudaMemcpyHostToDevice);
+
 
 //  Initialize arrays
     cudaMemset(Adv_d, 0, sizeof(double) * 3 * point_num * nv);

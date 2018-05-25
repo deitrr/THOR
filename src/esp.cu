@@ -18,7 +18,7 @@
 //
 // ESP -  Exoclimes Simulation Platform. (version 1.0)
 //
-//   
+//
 //
 // Method: [1] - Builds the icosahedral grid (Mendonca et al., 2016).
 //         Iteration:
@@ -30,11 +30,11 @@
 // Known limitations: - Runs in a single GPU.
 //
 // Known issues: None
-//   
 //
-// If you use this code please cite the following reference: 
 //
-//       [1] Mendonca, J.M., Grimm, S.L., Grosheintz, L., & Heng, K., ApJ, 829, 115, 2016  
+// If you use this code please cite the following reference:
+//
+//       [1] Mendonca, J.M., Grimm, S.L., Grosheintz, L., & Heng, K., ApJ, 829, 115, 2016
 //
 // Current Code Owner: Joao Mendonca, EEG. joao.mendonca@csh.unibe.ch
 //
@@ -64,10 +64,10 @@ int main (){
     printf("\n\n version 1.0\n\n");
 
 //
-//  Set the GPU device.    
+//  Set the GPU device.
     cudaError_t error;
     cudaSetDevice(GPU_ID_N);
-    
+
 //
 //  Building planet
     XPlanet Planet;
@@ -75,7 +75,7 @@ int main (){
 //
 //  Make the icosahedral grid
     Icogrid Grid(sprd               , // Spring dynamics option
-                 spring_beta        , // Parameter beta for spring dynamics 
+                 spring_beta        , // Parameter beta for spring dynamics
                  glevel             , // Horizontal resolution level
                  vlevel             , // Number of vertical layers
                  Planet.A           , // Planet radius
@@ -112,12 +112,13 @@ int main (){
                    Planet.P_Ref , // Reference pressure [Pa]
                    Planet.Gravit, // Gravity [m/s^2]
                    Planet.Omega , // Rotation rate [1/s]
-                   Planet.Diffc , // Strength of diffusion 
+                   Planet.Diffc , // Strength of diffusion
                    kb           , // Boltzmann constant [J/kg]
                    Planet.Tmean , // Isothermal atmosphere (at temperature Tmean)
                    Planet.Mmol  , // Mean molecular mass of dry air [kg]
                    mu           , // Atomic mass unit [kg]
-                   Planet.Rd    );// Gas constant [J/kg/K]
+                   Planet.Rd    , // Gas constant [J/kg/K]
+                   HH2R        ); // option for atomic H<->H2
 
     long startTime = clock();
 
@@ -170,7 +171,7 @@ int main (){
     printf("   Time integration =  %d s.\n", nsmax*timestep);
     printf("   Large time-step  =  %d s.\n", timestep);
     printf("    \n");
-    
+
 //
 //  Writes initial conditions
     double simulation_time = 0.0;
@@ -195,7 +196,7 @@ int main (){
 //  number of steps in the integration.
     for(int nstep = 1; nstep <= nsmax; ++nstep){
         X.current_step = nstep;
-        
+
 //
 //      Dynamical Core Integration (THOR)
         X.Thor (timestep     , // Time-step [s]
@@ -215,7 +216,7 @@ int main (){
 
 //
 //     Physical Core Integration (ProfX)
-       X.ProfX(planetnumber , // Planet ID 
+       X.ProfX(planetnumber , // Planet ID
                nstep        , // Step number
                hstest       , // Held-Suarez test option
                timestep     , // Time-step [s]
@@ -227,7 +228,8 @@ int main (){
                kb           , // Boltzmann constant [J/K]
                Planet.P_Ref , // Reference pressure [Pa]
                Planet.Gravit, // Gravity [m/s^2]
-               Planet.A     );// Planet radius [m]
+               Planet.A     , // Planet radius [m]
+               HH2R        ); // option for atomic H<->H2
 
 //
 //      Prints output every nout steps
@@ -239,7 +241,7 @@ int main (){
                      Planet.Omega        , // Rotation rate [s-1]
                      Planet.Gravit       , // Gravitational acceleration [m/s2]
                      Planet.Mmol         , // Mean molecular mass of dry air [kg]
-                     Planet.P_Ref        , // Reference surface pressure [Pa] 
+                     Planet.P_Ref        , // Reference surface pressure [Pa]
                      Planet.Top_altitude , // Top of the model's domain [m]
                      Planet.A            , // Planet radius [m]
                      Planet.simulation_ID, // Planet ID
@@ -250,7 +252,7 @@ int main (){
 //
 //  Prints the duration of the integration.
     long finishTime = clock();
-    cout << "\n\n Integration time = " << (finishTime - startTime)/CLOCKS_PER_SEC 
+    cout << "\n\n Integration time = " << (finishTime - startTime)/CLOCKS_PER_SEC
                                        << " seconds" << endl;
 
 //

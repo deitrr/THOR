@@ -60,7 +60,9 @@ __host__ void ESP::ProfX(int    planetnumber, // Planet ID
                          double kb          , // Boltzmann constant [J/K]
                          double P_Ref       , // Reference pressure [Pa]
                          double Gravit      , // Gravity [m/s^2]
-                         double A           ){// Planet radius [m]
+                         double A           , // Planet radius [m]
+                         bool hh2recomb     ){// option of atomic H<->H2
+
 
 //
 //  Number of threads per block.
@@ -135,6 +137,32 @@ __host__ void ESP::ProfX(int    planetnumber, // Planet ID
                                     lonlat_d     ,
                                     time_step    ,
                                     point_num    );
+      }
+      if (hh2recomb) {
+        cudaDeviceSynchronize();
+        recomb_H<<< NB, NTH >>> (Mh_d         ,
+                                    pressure_d   ,
+                                    Rho_d        ,
+                                    temperature_d,
+                                    mixH_d       ,
+                                    Gravit       ,
+                                    Cp           ,
+                                    Rd           ,
+                                    Altitude_d   ,
+                                    Altitudeh_d  ,
+                                    lonlat_d     ,
+                                    time_step    ,
+                                    point_num    );
+        cudaDeviceSynchronize();
+        ComputeMixH<<< NB, NTH >>> (temperature_d,
+                                    pt_d         ,
+                                    pressure_d   ,
+                                    Rho_d        ,
+                                    mixH_d       ,
+                                    P_Ref        ,
+                                    Rd           ,
+                                    Cp           ,
+                                    num          );
       }
     }
 //

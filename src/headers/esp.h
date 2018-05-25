@@ -60,7 +60,7 @@ public:
 
     // step counter for benchmark logging
     int current_step;
-    
+
 ///////////////////////////
 //  Host
     int *point_local_h    ;
@@ -92,6 +92,8 @@ public:
     double *Kdhz_h        ;
     double *Kdh4_h        ;
     bool    check_h       ;
+
+    double *mixH_h        ; //atomic hydrogen mixing ratio (for very hot planets)
 ///////////////////////////
 //  Device
     int *point_local_d    ;
