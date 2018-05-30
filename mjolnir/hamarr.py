@@ -43,6 +43,7 @@ class output:
         self.Pressure = np.zeros((grid.point_num,grid.nv,nts-ntsi+1))
         self.Mh = np.zeros((3,grid.point_num,grid.nv,nts-ntsi+1))
         self.Wh = np.zeros((grid.point_num,grid.nvi,nts-ntsi+1))
+        self.mixH = np.zeros((grid.point_num,grid.nv,nts-ntsi+1))
         self.ntsi = ntsi
         self.nts = nts
 
@@ -54,6 +55,7 @@ class output:
             Pressurei = openh5['Pressure'][...]
             Mhi = openh5['Mh'][...]
             Whi = openh5['Wh'][...]
+            mixH = openh5['mixH'][...]
             openh5.close()
 
             self.Rho[:,:,t-ntsi+1] = np.reshape(Rhoi,(grid.point_num,grid.nv))
@@ -61,8 +63,8 @@ class output:
             self.Mh[0,:,:,t-ntsi+1] = np.reshape(Mhi[::3],(grid.point_num,grid.nv))
             self.Mh[1,:,:,t-ntsi+1] = np.reshape(Mhi[1::3],(grid.point_num,grid.nv))
             self.Mh[2,:,:,t-ntsi+1] = np.reshape(Mhi[2::3],(grid.point_num,grid.nv))
-
             self.Wh[:,:,t-ntsi+1] = np.reshape(Whi,(grid.point_num,grid.nvi))
+            self.mixH[:,:,t-ntsi+1] = np.reshape(mixH,(grid.point_num,grid.nv))
 
 def temperature(input,grid,output,sigmaref):
     # Set the reference pressure

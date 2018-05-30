@@ -76,4 +76,4 @@
 #define GPU_ID_N 0        // Set GPU ID number
 
 // Output
-#define n_out 1000         // Print output every n_out steps
+#define n_out 100         // Print output every n_out steps
