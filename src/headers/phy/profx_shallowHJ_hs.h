@@ -70,7 +70,7 @@ __global__ void shallowHJ_hs(double *Mh_d         ,
         double sigmab = 0.7;
         double ka     = (1.0/40.0) * (1.0/86400.0);
         double ks     = (1.0/4.0) * (1.0/86400.0);
-        double dTy    = 300.0;
+        double dTy    = 2000.0;
         double ps, pre  ;
         double psm1;
         double lat = lonlat_d[id*2 + 1];
@@ -80,7 +80,7 @@ __global__ void shallowHJ_hs(double *Mh_d         ,
         double zstra = 2e6;
         double sigma_stra = 0.12;
         double Gamma_trop = 2e-4;
-        double T_surf = 1600;
+        double T_surf = 4000;
         double Delta_Tstra = 10;
         double beta_trop;
         double T_vert;

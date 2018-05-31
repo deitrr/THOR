@@ -44,11 +44,11 @@
 
 // Integration time
 #define nsmax        48000 // Number of time steps
-#define timestep     1800  // Time step  [seconds]
+#define timestep     300  // Time step  [seconds]
 
 // Grid
 #define sprd   true       // Spring dynamics
-#define glevel 4          // Horizontal resolution level.
+#define glevel 5          // Horizontal resolution level.
 #define spring_beta 1.15  // Parameter beta for spring dynamics
 #define vlevel 32         // Number of vertical layers
 
@@ -64,7 +64,7 @@
 #define rest   true          // Starting from rest
 
 // Benchmark test
-#define hstest 1          // Held-Suarez test for Earth == 1
+#define hstest 3          // Held-Suarez test for Earth == 1
 //  HS test for shallow hot Jupiter == 3
 //  HS test for tidally locked Earth == 2
 //  No HS test == 0
