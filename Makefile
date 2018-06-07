@@ -1,19 +1,21 @@
 # Builds THOR executable
 CC = nvcc
 
-sm:=61 # Streaming Multiprocessor version
+sm:=30 # Streaming Multiprocessor version
 arch := -arch sm_$(sm)
 
 path_hd  := $(shell pwd)/src/headers
 path_src := $(shell pwd)/src
 obj_cuda   := esp.o grid.o esp_initial.o planet.o thor_driver.o profx_driver.o esp_output.o 
-obj_cpp := storage.o binary_test.o
+obj_cpp := storage.o binary_test.o config_file.o cmdargs.o
+obj_tests := cmdargs_test.o cmdargs.o
 obj := $(obj_cpp) $(obj_cuda)
 headers := $(path_hd)/define.h $(path_hd)/grid.h $(path_hd)/planet.h $(path_hd)/esp.h \
            $(path_hd)/dyn/thor_fastmodes.h $(path_hd)/dyn/thor_adv_cor.h $(path_hd)/dyn/thor_auxiliary.h \
            $(path_hd)/dyn/thor_vertical_int.h $(path_hd)/dyn/thor_slowmodes.h $(path_hd)/dyn/thor_diff.h \
            $(path_hd)/dyn/thor_div.h $(path_hd)/phy/profx_auxiliary.h $(path_hd)/phy/profx_held_suarez.h \
-           $(path_hd)/storage.h $(path_hd)/binary_test.h $(path_hd)/debug.h
+           $(path_hd)/storage.h $(path_hd)/binary_test.h $(path_hd)/debug.h $(path_hd)/config_file.h \
+           $(path_hd)/config_file.h
 
 # define specific compiler. if if fails on newer installations, get it to use g++-5
 ccbin := 
@@ -21,7 +23,8 @@ ccbin :=
 
 # define common flags
 flags := $(ccbin) --compiler-options -Wall -std=c++11
-
+dep_flags := $(ccbin) -std=c++11
+link_flags := $(ccbin)
 # define debug flags
 debug_flags := -g -G
 
@@ -32,7 +35,7 @@ release_flags := -O3
 profiling_flags := -pg
 
 # define where to find sources
-source_dirs := src src/grid src/initial src/thor src/profx src/output src/devel
+source_dirs := src src/grid src/initial src/thor src/profx src/output src/devel src/input src/test
 
 vpath %.cu $(source_dirs)
 vpath %.cpp $(source_dirs)
@@ -56,59 +59,132 @@ includedir = ${path_hd}
 OBJDIR = obj
 BINDIR = bin
 RESDIR = results
+TESTDIR = tests
+
 .PHONY: all clean
 
+$(info goals: $(MAKECMDGOALS))
+
+# default target
+OUTPUTDIR := default
+MODE := UNDEF
+
 # profiling target
-profiling: flags += $(profiling_flags)
-profiling: all
+ifeq "$(findstring prof, $(MAKECMDGOALS))" "prof"
+	flags += $(profiling_flags) -DBUILD_LEVEL="\"profiling\""
+	MODE := prof
+	OUTPUTDIR := prof
+endif
 
 # debug target
-debug: flags += $(debug_flags)
-debug: all
+ifeq "$(findstring debug, $(MAKECMDGOALS))" "debug"
+	flags += $(debug_flags) -DBUILD_LEVEL="\"debug\""
+	MODE := debug
+	OUTPUTDIR := debug
+endif
 
 # release target
-release: flags += $(release_flags)
-release: all
+ifeq "$(findstring release, $(MAKECMDGOALS))" "release"
+	flags += $(release_flags) -DBUILD_LEVEL="\"release\""
+	MODE := release
+	OUTPUTDIR := release
+endif
 
-all: $(BINDIR)/esp
+# test target
+ifeq "$(findstring tests, $(MAKECMDGOALS))" "tests"
+	flags += $(debug_flags) -DBUILD_LEVEL="\"test\""
+	MODE := tests
+	OUTPUTDIR := debug
+endif
+
+debug: all
+release: all
+prof: all
+
+#######################################################################
+# main binary
+all: $(BINDIR)/$(OUTPUTDIR)/esp
+
+$(info Compile mode: $(MODE))
+$(info Output objects to: $(OBJDIR)/$(OUTPUTDIR))
+$(info Output tests to: $(BINDIR)/$(TESTDIR))
+$(info flags: $(flags))
 
 # create object directory if missing
-$(OBJDIR) $(BINDIR) $(RESDIR):
+$(BINDIR) $(RESDIR) $(OBJDIR):
 	mkdir $@
 
+$(BINDIR)/${OUTPUTDIR}: $(BINDIR)
+	mkdir -p $(BINDIR)/$(OUTPUTDIR)
+
+$(OBJDIR)/${OUTPUTDIR}: $(OBJDIR)
+	mkdir -p $(OBJDIR)/$(OUTPUTDIR)
+
+$(BINDIR)/${TESTDIR}: $(BINDIR)
+	mkdir -p $(BINDIR)/$(TESTDIR)
+
+
 # make dependency lists
-$(OBJDIR)/%.d: %.cu |$(OBJDIR)
+# for CUDA files
+$(OBJDIR)/${OUTPUTDIR}/%.d: %.cu | $(OBJDIR)/$(OUTPUTDIR) $(OBJDIR)
 	@set -e; rm -f $@; \
-	$(CC) $(arch) $(flags) $(h5include) $(h5libdir) -I$(includedir) --generate-dependencies $< > $@.$$$$; \
+	$(CC) $(arch) $(dep_flags) $(h5include) $(h5libdir) -I$(includedir) --generate-dependencies $< > $@.$$$$; \
 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
-$(OBJDIR)/%.d: %.cpp |$(OBJDIR)
+# for C++ files
+$(OBJDIR)/${OUTPUTDIR}/%.d: %.cpp | $(OBJDIR)/$(OUTPUTDIR) $(OBJDIR)
 	@set -e; rm -f $@; \
-	$(CC) $(arch) $(flags) $(h5include) $(h5libdir) -I$(includedir)  --generate-dependencies  $< > $@.$$$$; \
+	$(CC) $(arch) $(dep_flags) $(h5include) $(h5libdir) -I$(includedir)  --generate-dependencies  $< > $@.$$$$; \
 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
-# build *.cu CUDA objects
-$(OBJDIR)/%.o: %.cu $(OBJDIR)/%.d|$(OBJDIR)
+# build objects
+# CUDA files
+$(OBJDIR)/${OUTPUTDIR}/%.o: %.cu $(OBJDIR)/$(OUTPUTDIR)/%.d| $(OBJDIR)/$(OUTPUTDIR) $(OBJDIR)
 	@echo creating $@
 	$(CC) $(arch)  $(flags) $(h5include) $(h5libdir) -I$(includedir) -dc -o $@ $<
 	@echo done $@
 
-$(OBJDIR)/%.o: %.cpp $(OBJDIR)/%.d|$(OBJDIR)
+# C++ files
+$(OBJDIR)/${OUTPUTDIR}/%.o: %.cpp $(OBJDIR)/$(OUTPUTDIR)/%.d| $(OBJDIR)/$(OUTPUTDIR) $(OBJDIR)
 	@echo creating $@
 	$(CC) $(arch)  $(flags) $(h5include) $(h5libdir) -I$(includedir) -dc -o $@ $< 
 	@echo done $@
 
+
 # link *.o objects
-$(BINDIR)/esp: $(addprefix $(OBJDIR)/,$(obj)) | $(BINDIR) $(RESDIR)
+$(BINDIR)/${OUTPUTDIR}/esp: $(addprefix $(OBJDIR)/$(OUTPUTDIR)/,$(obj)) | $(BINDIR) $(RESDIR) $(BINDIR)/$(OUTPUTDIR)  $(OBJDIR)
 	@echo creating $@
-	$(CC) $(arch) $(flags) -o $(BINDIR)/esp $(addprefix $(OBJDIR)/,$(obj))  $(h5libdir) $(h5libs)
+	$(CC) $(arch) $(link_flags) -o $(BINDIR)/$(OUTPUTDIR)/esp $(addprefix $(OBJDIR)/$(OUTPUTDIR)/,$(obj))  $(h5libdir) $(h5libs)
+	rm -f bin/esp
+	ln -s bin/$(OUTPUTDIR)/esp -r -t bin
 
 
+#######################################################################
+# Build Tests
+
+tests: ${BINDIR}/${TESTDIR}/cmdargs_test
+
+$(BINDIR)/$(TESTDIR)/cmdargs_test:  $(addprefix $(OBJDIR)/$(OUTPUTDIR)/,$(obj_tests)) | $(BINDIR)/${OUTPUTDIR} $(BINDIR)/$(TESTDIR) $(BINDIR) $(RESDIR) 
+	@echo creating $@
+	$(CC) $(arch) $(flags) $(debug_flags) -o $(BINDIR)/$(TESTDIR)/cmdargs_test $(addprefix $(OBJDIR)/$(OUTPUTDIR)/,$(obj_tests))  $(h5libdir) $(h5libs)
+
+#######################################################################
+# Cleanup 
 .phony: clean,ar
 clean:
-	-rm bin/esp $(addprefix $(OBJDIR)/,$(obj)) $(obj:%.o=$(OBJDIR)/%.d)
+	-rm -f bin/default/esp $(addprefix $(OBJDIR)/default/,$(obj)) $(obj:%.o=$(OBJDIR)/default/%.d)
+	-rm -f bin/debug/esp $(addprefix $(OBJDIR)/debug/,$(obj)) $(obj:%.o=$(OBJDIR)/debug/%.d)
+	-rm -f bin/release/esp $(addprefix $(OBJDIR)/release/,$(obj)) $(obj:%.o=$(OBJDIR)/release/%.d)
+	-rm -f bin/prof/esp $(addprefix $(OBJDIR)/prof/,$(obj)) $(obj:%.o=$(OBJDIR)/prof/%.d)
+	-rm -f bin/tests/cmdargs_test $(addprefix $(OBJDIR)/debug/,$(obj_tests)) $(obj_tests:%.o=$(OBJDIR)/debug/%.d)
+	-rm -f bin/esp
 
-include $(obj:%.o=$(OBJDIR)/%.d)
-
+#######################################################################
+# dependencies includes
+ifeq "${MODE}" "tests"
+include $(obj_tests:%.o=$(OBJDIR)/$(OUTPUTDIR)/%.d)
+else
+include $(obj:%.o=$(OBJDIR)/$(OUTPUTDIR)/%.d)
+endif
