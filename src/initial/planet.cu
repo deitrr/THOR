@@ -60,18 +60,18 @@ XPlanet::XPlanet(){
         //////////////
         // BULK     //
         //////////////
-        A = 1.322e8   ; // Radius [m]
-        Omega = 4.914e-5 ; // Rotation rate [s-1]
-        Gravit= 19.95    ; // Gravitational acceleration [m/s^2]
+        A = 72427000.0    ; // Radius [m]
+        Omega = 9.09E-5 ; // Rotation rate [s-1]
+        Gravit= 47.0      ; // Gravitational acceleration [m/s^2]
         ////////////////
         // ATMOSPHERE //
         ////////////////
-        Mmol = 28.964         ; // Mean molecular mass of dry air [kg]
-        Rd   = 3779          ; // Gas constant [J/(Kg K)]
-        Cp   = 13226.5         ; // Specific heat capacities [J/(Kg K)]
-        Tmean= 1800          ; // Mean atmospheric temperature [K]
-        P_Ref = 100000.0      ; // Reference surface pressure [Pa]
-        Top_altitude = 2.4e6; // Altitude of the top of the model domain [m]
+        Mmol = 2.24        ; // Mean molecular mass of dry air [kg]
+        Rd   = 3714          ; // Gas constant [J/(Kg K)]
+        Cp   = 13000        ; // Specific heat capacities [J/(Kg K)]
+        Tmean= 1400          ; // Mean atmospheric temperature [K]
+        P_Ref = 10000000.0      ; // Reference surface pressure [Pa]
+        Top_altitude = 1235376.0; // Altitude of the top of the model domain [m]
         Diffc = 0.009973         ; // Strength of diffusion
     }
 }
