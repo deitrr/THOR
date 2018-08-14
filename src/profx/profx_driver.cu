@@ -69,13 +69,9 @@ __host__ void ESP::ProfX(int    planetnumber, // Planet ID
                          double P_Ref       , // Reference pressure [Pa]
                          double Gravit      , // Gravity [m/s^2]
                          double A           ,// Planet radius [m]
-<<<<<<< HEAD
                          bool   sponge      ,// sponge layer on/off
+                         bool   shrink_sponge, // Shrink sponge after some time
                          bool hh2recomb     ){// option of atomic H<->H2
-=======
-                         bool   sponge      , // Use sponge layer?
-                         bool   shrink_sponge){ // Shrink sponge after some time
->>>>>>> master
     USE_BENCHMARK()
 //
 //  Number of threads per block.
