@@ -12,7 +12,7 @@ __device__ double myatomicAdd(double* address, double val){
     return __longlong_as_double(old);
 }
 
-__global__ void zonal_v (double *M_d          , 
+__global__ void zonal_v (double *M_d          ,
 		                 double *W_d          ,
 		                 double *Rho_d        ,
 		                 double *vbar_d       ,
@@ -70,7 +70,7 @@ __global__ void sponge_layer (double * M_d             ,
 //
 
 	double n;
-	double ns = 1.0 - nsi;
+	double ns = nsi;
 	double ztop = Altitudeh_d[nv];
 	double u,v, w;
 	double du,dv,dw;
@@ -136,11 +136,18 @@ __global__ void sponge_layer (double * M_d             ,
 			w = W_d[id*nv +lev]/rho;
 
 			n = Altitude_d[lev]/ztop;
-			if(n >=ns)kv = Rv*pow(sin(0.5*M_PI*(n-ns)*(1.0)/(1.0-ns)),2.0);
-			else kv = 0.0;
+			if(n >=ns) {
+        kv = Rv*pow(sin(0.5*M_PI*(n-ns)*(1.0)/(1.0-ns)),2.0);
+      } else {
+        kv = 0.0;
+      }
 
 			du = -kv*(u - vbu)*dt;
 			dv = -kv*(v - vbv)*dt;
+
+      // if (kv >= 5e-6) {
+      //   printf("n = %f, kv = %f\n",n,kv);
+      // }
 
 			vx = du*(-sin(lon))+
 			 	 dv*(-sin(lonlat_d[id*2+1]*cos(lon)));

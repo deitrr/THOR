@@ -78,6 +78,7 @@ __host__ ESP::ESP(int *point_local_    ,
                   int *zonal_mean_tab  ,
                   double Rv_sponge_    ,
                   double ns_sponge_    ,
+                  double t_shrink_     ,
                   int point_num_    ): nl_region(nl_region_),
                                        nr(nr_),
                                        point_num(point_num_),
@@ -112,6 +113,7 @@ __host__ ESP::ESP(int *point_local_    ,
 
     Rv_sponge = Rv_sponge_;
     ns_sponge = ns_sponge_;
+    t_shrink = t_shrink_;
 //
 //  Allocate Data
     AllocData();
