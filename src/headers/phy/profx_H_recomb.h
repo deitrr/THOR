@@ -102,19 +102,38 @@ __global__ void recomb_H(double *Mh_d         ,
     int nv = gridDim.y;
     int lev = blockIdx.y;
 
-    double dG, Kprime, mixH_tmp, dT, temp;
-
     if (id < num){
-      // dGibbs<<<1,1>>>(temperature_d[id*nv+lev], dG);
-      temp = temperature_d[id*nv+lev];
-      dG = 2.1370867596206315e-17*temp*temp*temp*temp*temp +
-             -3.8689132818241159e-13*temp*temp*temp*temp +
-             2.7275438366298867e-09*temp*temp*temp +
-             -9.6170574202103724e-06*temp*temp +
-             -0.043948876890469453*temp +
-             216.81259827590887;
-      Kprime = exp(2000*dG/Runiv/temperature_d[id*nv+lev])*pressure_d[id*nv+lev]/100000;
-      mixH_tmp = (-1.0+sqrt(1.0+8*Kprime))/(4*Kprime);
+      double Tau_dyn, Tau_chem, dbar, vh, Tau;
+      //calculate dynamical time scale
+      dbar = sqrt(areasT[id]);    //approximate "width" of cell
+      vh = sqrt(Mh_d[id*3*nv+lev*3+0]*Mh_d[id*3*nv+lev*3+0] +
+                Mh_d[id*3*nv+lev*3+1]*Mh_d[id*3*nv+lev*3+1] +
+                Mh_d[id*3*nv+lev*3+2]*Mh_d[id*3*nv+lev*3+2])/Rho_d[id*nv+lev]; //horizontal speed
+      Tau_dyn = dbar/vh;
+
+      //calculate chemical time scale
+      Tau_chem = chemical_time_H();
+
+      double dG, Kprime, mixH_tmp, dT, temp;
+
+      if (Tau_dyn > Tau_chem) {
+        temp = temperature_d[id*nv+lev];
+        dG = 2.1370867596206315e-17*temp*temp*temp*temp*temp +
+               -3.8689132818241159e-13*temp*temp*temp*temp +
+               2.7275438366298867e-09*temp*temp*temp +
+               -9.6170574202103724e-06*temp*temp +
+               -0.043948876890469453*temp +
+               216.81259827590887;
+        Kprime = exp(2000*dG/Runiv/temperature_d[id*nv+lev])*pressure_d[id*nv+lev]/100000;
+        mixH_tmp = (-1.0+sqrt(1.0+8*Kprime))/(4*Kprime);  // equilibrium mass fraction of H
+        Tau = Tau_dyn;
+      } else {
+        //something here to get mixH at substellar point
+        mixH_tmp = mixH_subs;
+        Tau = Tau_chem;
+      }
+
+      // revise below XXX
       dT = -(qbond*mixH_tmp/Cp - qbond*mixH_d[id*nv+lev]/Cp);
       temperature_d[id*nv+lev] += dT;
     }

@@ -302,6 +302,7 @@ public:
                double,
                double,
                bool  ,
+               bool  ,
                bool  );
 
     void CopyToHost();
