@@ -51,6 +51,7 @@
 #include "storage.h"
 #include "directories.h"
 #include "../headers/phy/valkyrie_jet_steadystate.h"
+#include "../headers/phy/valkyrie_conservation.h"
 
 #include <map>
 
@@ -136,8 +137,12 @@ __host__ void ESP::AllocData(){
     Mh_h         = (double*)malloc(nv*point_num*3 * sizeof(double));
     W_h          = (double*)malloc(nv*point_num   * sizeof(double));
     Wh_h         = (double*)malloc(nvi*point_num  * sizeof(double));
-
     mixH_h       = (double*)malloc(nv*point_num   * sizeof(double));
+    Etotal_h      = (double*)malloc(nv*point_num   * sizeof(double));
+    Mass_h        = (double*)malloc(nv*point_num   * sizeof(double));
+    AngMomx_h     = (double*)malloc(nv*point_num   * sizeof(double));
+    AngMomy_h     = (double*)malloc(nv*point_num   * sizeof(double));
+    AngMomz_h     = (double*)malloc(nv*point_num   * sizeof(double));
 
 //  Allocate data in device
 //  Grid
@@ -148,6 +153,7 @@ __host__ void ESP::AllocData(){
     cudaMalloc((void **)&nvecoa_d , 6 * 3 * point_num * sizeof(double));
     cudaMalloc((void **)&nvecti_d , 6 * 3 * point_num * sizeof(double));
     cudaMalloc((void **)&nvecte_d , 6 * 3 * point_num * sizeof(double));
+    cudaMalloc((void **)&areasT_d, point_num * sizeof(double));
     cudaMalloc((void **)&areasTr_d, 6 * point_num * sizeof(double));
     cudaMalloc((void **)&func_r_d  , 3 * point_num * sizeof(double));
     cudaMalloc((void **)&div_d, 7 * 3 * point_num * sizeof(double));
@@ -241,6 +247,18 @@ __host__ void ESP::AllocData(){
     cudaMalloc((void **)&thtemp      , nvi * point_num *     sizeof(double));
     cudaMalloc((void **)&ttemp       , nv * point_num *     sizeof(double));
     cudaMalloc((void **)&dtemp       , nv * point_num *     sizeof(double));
+
+//  Conservation quantities
+    cudaMalloc((void **)&Etotal_d       , nv * point_num *     sizeof(double));
+    cudaMalloc((void **)&Mass_d         , nv * point_num *     sizeof(double));
+    cudaMalloc((void **)&AngMomx_d      , nv * point_num *     sizeof(double));
+    cudaMalloc((void **)&AngMomy_d      , nv * point_num *     sizeof(double));
+    cudaMalloc((void **)&AngMomz_d      , nv * point_num *     sizeof(double));
+    cudaMalloc((void **)&GlobalE_d      , 1 *     sizeof(double));
+    cudaMalloc((void **)&GlobalMass_d   , 1 *     sizeof(double));
+    cudaMalloc((void **)&GlobalAMx_d    , 1 *     sizeof(double));
+    cudaMalloc((void **)&GlobalAMy_d    , 1 *     sizeof(double));
+    cudaMalloc((void **)&GlobalAMz_d    , 1 *     sizeof(double));
 }
 
 __host__ bool ESP::InitialValues(bool rest          ,
@@ -260,6 +278,7 @@ __host__ bool ESP::InitialValues(bool rest          ,
                                  double mu          ,
                                  double Rd          ,
                                  bool sponge        ,
+                                 bool DeepModel     ,
                                  int TPprof         ,
                                  int hstest         ,
                                  int & nstep        ,
@@ -534,6 +553,7 @@ __host__ bool ESP::InitialValues(bool rest          ,
     cudaMemcpy(nvecti_d  , nvecti_h  , 6 * 3 * point_num * sizeof(double), cudaMemcpyHostToDevice);
     cudaMemcpy(nvecte_d  , nvecte_h  , 6 * 3 * point_num * sizeof(double), cudaMemcpyHostToDevice);
     cudaMemcpy(areasTr_d , areasTr_h , 6 *     point_num * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(areasT_d , areasT_h ,   point_num * sizeof(double), cudaMemcpyHostToDevice);
     cudaMemcpy(lonlat_d , lonlat_h , 2 * point_num * sizeof(double), cudaMemcpyHostToDevice);
     cudaMemcpy(func_r_d  , func_r_h  , 3 * point_num * sizeof(double), cudaMemcpyHostToDevice);
     cudaMemcpy(temperature_d, temperature_h, point_num * nv    *     sizeof(double), cudaMemcpyHostToDevice);
@@ -585,6 +605,62 @@ __host__ bool ESP::InitialValues(bool rest          ,
 
     delete [] Kdh4_h;
     delete [] Kdhz_h;
+
+      //  Number of threads per block.
+      const int NTH = 256;
+
+      //  Specify the block sizes.
+      dim3 NB((point_num / NTH) + 1, nv, 1);
+      // calculate quantities we hope to conserve!
+      cudaMemset(GlobalE_d     , 0, sizeof(double));
+      cudaMemset(GlobalMass_d  , 0, sizeof(double));
+      cudaMemset(GlobalAMx_d   , 0, sizeof(double));
+      cudaMemset(GlobalAMy_d   , 0, sizeof(double));
+      cudaMemset(GlobalAMz_d   , 0, sizeof(double));
+
+      CalcMass <<< NB, NTH >>> (Mass_d       ,
+                                GlobalMass_d ,
+                                Rho_d        ,
+                                A            ,
+                                Altitudeh_d  ,
+                                lonlat_d     ,
+                                areasT_d     ,
+                                point_num    ,
+                                DeepModel    );
+
+      CalcTotEnergy <<< NB, NTH >>> (Etotal_d     ,
+                                     GlobalE_d    ,
+                                     Mh_d         ,
+                                     W_d          ,
+                                     Rho_d        ,
+                                     temperature_d,
+                                     Gravit       ,
+                                     Cp           ,
+                                     Rd           ,
+                                     A            ,
+                                     Altitude_d   ,
+                                     Altitudeh_d  ,
+                                     lonlat_d     ,
+                                     areasT_d     ,
+                                     point_num    ,
+                                     DeepModel    );
+
+      CalcAngMom <<< NB, NTH >>> ( AngMomx_d    ,
+                                   AngMomy_d    ,
+                                   AngMomz_d    ,
+                                   GlobalAMx_d  ,
+                                   GlobalAMy_d  ,
+                                   GlobalAMz_d  ,
+                                   Mh_d         ,
+                                   Rho_d        ,
+                                   A            ,
+                                   Omega        ,
+                                   Altitude_d   ,
+                                   Altitudeh_d  ,
+                                   lonlat_d     ,
+                                   areasT_d     ,
+                                   point_num    ,
+                                   DeepModel    );
 
     return true;
 }
@@ -645,6 +721,7 @@ __host__ ESP::~ESP(){
     cudaFree(nvecoa_d);
     cudaFree(nvecti_d);
     cudaFree(nvecte_d);
+    cudaFree(areasT_d);
     cudaFree(areasTr_d);
     cudaFree(lonlat_d);
     cudaFree(div_d);

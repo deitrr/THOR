@@ -6,6 +6,8 @@ import h5py
 import time
 
 plt.rcParams['image.cmap'] = 'magma'
+plt.rcParams['font.family'] = 'sans-serif'
+plt.rcParams['font.sans-serif'] = 'Helvetica-Normal'
 
 class input:
     def __init__(self,resultsf,simID):
@@ -25,11 +27,12 @@ class input:
         self.P_Ref = openh5['P_Ref'][...]
         self.Top_altitude = openh5['Top_altitude'][...]
         self.Cp = openh5['Cp'][...]
-        self.spring_beta = openh5['spring_beta'][...]
-        self.vlevel = openh5['vlevel'][...]
-        self.glevel = openh5['glevel'][...]
         self.Gravit = openh5['Gravit'][...]
-        self.spring_dynamics = openh5['spring_dynamics'][...]
+        if 'spring_beta' in openh5.keys():
+            self.spring_beta = openh5['spring_beta'][...]
+            self.vlevel = openh5['vlevel'][...]
+            self.glevel = openh5['glevel'][...]
+            self.spring_dynamics = openh5['spring_dynamics'][...]
         self.resultsf = resultsf
         self.simID = simID
         openh5.close()
@@ -63,6 +66,16 @@ class output:
         self.ntsi = ntsi
         self.nts = nts
         self.time = np.zeros(nts-ntsi+1)
+        self.Etotal = np.zeros((grid.point_num,grid.nv,nts-ntsi+1))
+        self.Mass = np.zeros((grid.point_num,grid.nv,nts-ntsi+1))
+        self.AngMomx = np.zeros((grid.point_num,grid.nv,nts-ntsi+1))
+        self.AngMomy = np.zeros((grid.point_num,grid.nv,nts-ntsi+1))
+        self.AngMomz = np.zeros((grid.point_num,grid.nv,nts-ntsi+1))
+        self.GlobalE = np.zeros(nts-ntsi+1)
+        self.GlobalMass = np.zeros(nts-ntsi+1)
+        self.GlobalAMx = np.zeros(nts-ntsi+1)
+        self.GlobalAMy = np.zeros(nts-ntsi+1)
+        self.GlobalAMz = np.zeros(nts-ntsi+1)
 
         # Read model results
         for t in np.arange(ntsi-1,nts):
@@ -76,6 +89,21 @@ class output:
             Mhi = openh5['Mh'][...]
             Whi = openh5['Wh'][...]
             time = openh5['simulation_time'][0]/86400
+            if 'Etotal' in openh5.keys():
+                Etotali = openh5['Etotal'][...]
+                Massi = openh5['Mass'][...]
+                AngMomxi = openh5['AngMomx'][...]
+                AngMomyi = openh5['AngMomy'][...]
+                AngMomzi = openh5['AngMomz'][...]
+                self.GlobalE[t-ntsi+1] = openh5['GlobalE'][0]
+                self.GlobalMass[t-ntsi+1] = openh5['GlobalMass'][0]
+                self.GlobalAMx[t-ntsi+1] = openh5['GlobalAMx'][0]
+                self.GlobalAMy[t-ntsi+1] = openh5['GlobalAMy'][0]
+                self.GlobalAMz[t-ntsi+1] = openh5['GlobalAMz'][0]
+                self.ConvData = True
+            else:
+                print('Warning: conservation diagnostics not available in file %s'%fileh5)
+                self.ConvData = False
             openh5.close()
 
             self.Rho[:,:,t-ntsi+1] = np.reshape(Rhoi,(grid.point_num,grid.nv))
@@ -85,7 +113,12 @@ class output:
             self.Mh[2,:,:,t-ntsi+1] = np.reshape(Mhi[2::3],(grid.point_num,grid.nv))
             self.Wh[:,:,t-ntsi+1] = np.reshape(Whi,(grid.point_num,grid.nvi))
             self.time[t-ntsi+1] = time
-
+            if 'Etotali' in locals():
+                self.Etotal[:,:,t-ntsi+1] = np.reshape(Etotali,(grid.point_num,grid.nv))
+                self.Mass[:,:,t-ntsi+1] = np.reshape(Massi,(grid.point_num,grid.nv))
+                self.AngMomx[:,:,t-ntsi+1] = np.reshape(AngMomxi,(grid.point_num,grid.nv))
+                self.AngMomy[:,:,t-ntsi+1] = np.reshape(AngMomyi,(grid.point_num,grid.nv))
+                self.AngMomz[:,:,t-ntsi+1] = np.reshape(AngMomzi,(grid.point_num,grid.nv))
 
 class GetOutput:
     def __init__(self,resultsf,simID,ntsi,nts):
@@ -154,7 +187,9 @@ def temperature(input,grid,output,sigmaref):
         plt.gca().set_yscale("log")
     plt.xlabel('Latitude (deg)')
     plt.ylabel('Pressure (mba)')
+    plt.title('Time = %#.3f - %#.3f days'%(output.time[0],output.time[-1]))
     clb = plt.colorbar(C)
+    clb.set_label(r'Temperature (K)')
     if not os.path.exists(input.resultsf+'/figures'):
         os.mkdir(input.resultsf+'/figures')
     plt.tight_layout()
@@ -252,7 +287,9 @@ def u(input,grid,output,sigmaref):
         plt.gca().set_yscale("log")
     plt.xlabel('Latitude (deg)')
     plt.ylabel('Pressure (mba)')
+    plt.title('Time = %#.3f - %#.3f days'%(output.time[0],output.time[-1]))
     clb = plt.colorbar(C)
+    clb.set_label(r'Velocity (m s$^{-1}$)')
     if not os.path.exists(input.resultsf+'/figures'):
         os.mkdir(input.resultsf+'/figures')
     plt.tight_layout()
@@ -330,8 +367,9 @@ def uv_lev(input,grid,output,Plev):
         cc.set_edgecolor("face") #fixes a stupid bug in matplotlib 2.0
     plt.ylabel('Latitude (deg)')
     plt.xlabel('Longitude (deg)')
-
+    plt.title('Time = %#.3f - %#.3f days'%(output.time[0],output.time[-1]))
     clb = plt.colorbar(C)
+    clb.set_label(r'Velocity (m s$^{-1}$)')
     if not os.path.exists(input.resultsf+'/figures'):
         os.mkdir(input.resultsf+'/figures')
     plt.tight_layout()
@@ -346,8 +384,9 @@ def uv_lev(input,grid,output,Plev):
         cc.set_edgecolor("face") #fixes a stupid bug in matplotlib 2.0
     plt.ylabel('Latitude (deg)')
     plt.xlabel('Longitude (deg)')
-
+    plt.title('Time = %#.3f - %#.3f days'%(output.time[0],output.time[-1]))
     clb = plt.colorbar(C)
+    clb.set_label(r'Velocity (m s$^{-1}$)')
     if not os.path.exists(input.resultsf+'/figures'):
         os.mkdir(input.resultsf+'/grid.figures')
     plt.tight_layout()
@@ -444,8 +483,10 @@ def temperature_u_lev(input,grid,output,Plev):
     plt.xlabel('Longitude (deg)')
     plt.quiver(lonq*180/np.pi,latq*180/np.pi,U,V,color='0.5')
     #plt.plot(grid.lon*180/np.pi,grid.lat*180/np.pi,'w.')
-
+    plt.title('Time = %#.3f - %#.3f days'%(output.time[0],output.time[-1]))
     clb = plt.colorbar(C)
+    clb.set_label(r'Temperature (K)')
+
     if not os.path.exists(input.resultsf+'/figures'):
         os.mkdir(input.resultsf+'/figures')
     plt.tight_layout()
@@ -516,7 +557,9 @@ def potential_temp(input,grid,output,sigmaref):
         plt.gca().set_yscale("log")
     plt.xlabel('Latitude (deg)')
     plt.ylabel('Pressure (mba)')
+    plt.title('Time = %#.3f - %#.3f days'%(output.time[0],output.time[-1]))
     clb = plt.colorbar(C)
+    clb.set_label(r'Potential temperature (K)')
     if not os.path.exists(input.resultsf+'/figures'):
         os.mkdir(input.resultsf+'/figures')
     plt.tight_layout()
@@ -593,7 +636,9 @@ def potential_temp_alt(Rho, Pressure, lon, lat, num, nts, ntsi, Rd, ps0, nv, sig
     # plt.gca().invert_yaxis()
     plt.xlabel('Latitude (deg)')
     plt.ylabel('Pressure (mba)')
+    plt.title('Time = %#.3f - %#.3f days'%(output.time[0],output.time[-1]))
     clb = plt.colorbar(C)
+    clb.set_label(r'Potential temperature (K)')
     if not os.path.exists(resultsf+'/figures'):
         os.mkdir(resultsf+'/figures')
     plt.tight_layout()
@@ -786,8 +831,10 @@ def potential_vort_vert(input,grid,output,sigmaref):
         plt.gca().set_yscale("log")
     plt.xlabel('Latitude (deg)')
     plt.ylabel('Pressure (mba)')
+    plt.title('Time = %#.3f - %#.3f days'%(output.time[0],output.time[-1]))
     #plt.ylabel('Altitude (m)')
     clb = plt.colorbar(C)
+    clb.set_label(r'Potential vorticity (K m$^2$ kg$^{-1}$ s$^{-1}$)')
     if not os.path.exists(input.resultsf+'/figures'):
         os.mkdir(input.resultsf+'/figures')
     plt.tight_layout()
@@ -889,7 +936,9 @@ def potential_vort_lev(input,grid,output,sigmaref):
     # plt.gca().invert_yaxis()
     plt.ylabel('Latitude (deg)')
     plt.xlabel('Longitude (deg)')
+    plt.title('Time = %#.3f - %#.3f days'%(output.time[0],output.time[-1]))
     clb = plt.colorbar(C)
+    clb.set_label(r'Potential vorticity (K m$^2$ kg$^{-1}$ s$^{-1}$)')
     if not os.path.exists(input.resultsf+'/figures'):
         os.mkdir(input.resultsf+'/figures')
     plt.tight_layout()
@@ -991,7 +1040,9 @@ def rela_vort_lev(input,grid,output,sigmaref):
     # plt.gca().invert_yaxis()
     plt.ylabel('Latitude (deg)')
     plt.xlabel('Longitude (deg)')
+    plt.title('Time = %#.3f - %#.3f days'%(output.time[0],output.time[-1]))
     clb = plt.colorbar(C)
+    clb.set_label(r'Relative vorticity (s$^{-1}$)')
     if not os.path.exists(input.resultsf+'/figures'):
         os.mkdir(input.resultsf+'/figures')
     plt.tight_layout()
@@ -1060,8 +1111,191 @@ def TPprof(input,grid,output,sigmaref,column):
     plt.gca().invert_yaxis()
     plt.ylabel('Pressure (mbar)')
     plt.xlabel('Temperature [K]')
-
+    plt.title('Time = %#.3f - %#.3f days'%(output.time[0],output.time[-1]))
     if not os.path.exists(input.resultsf+'/figures'):
         os.mkdir(input.resultsf+'/figures')
     plt.savefig(input.resultsf+'/figures/TPprofile_i%d_l%d.pdf'%(output.ntsi,output.nts))
+    plt.close()
+
+def streamf(input,grid,output,sigmaref):
+    # eulerian stream function or mass stream function
+    # Set the reference pressure
+    Pref = input.P_Ref*sigmaref
+    d_sig = np.size(sigmaref)
+
+    # Set the latitude-longitude grid.
+    res_deg = 0.005
+    loni, lati = np.meshgrid(np.arange(0,2*np.pi,res_deg),\
+        np.arange(-np.pi/2,np.pi/2,res_deg))
+    d_lon = np.shape(loni)
+    tsp = output.nts-output.ntsi+1
+    ###################
+    # Stream function #
+    ###################
+
+    # Initialize arrays
+    vii = (output.Mh[0]*(-np.sin(grid.lat[:,None,None])*np.cos(grid.lon[:,None,None])) + \
+                output.Mh[1]*(-np.sin(grid.lat[:,None,None])*np.sin(grid.lon[:,None,None])) + \
+                output.Mh[2]*np.cos(grid.lat[:,None,None]))/output.Rho
+    vi = np.zeros((grid.point_num,d_sig))
+    v = np.zeros((d_lon[0],d_lon[1],d_sig,tsp))
+
+    # Compute meridional wind
+    for t in np.arange(tsp):
+        for i in np.arange(grid.point_num):
+            sigma = output.Pressure[i,:,t]
+            # Interpolate atmospheric column ot the reference pressure.
+            # Need to reverse index all arrays because pchip only works if x is increasing
+            vi[i,:] = interp.pchip_interpolate(sigma[::-1],vii[i,::-1,t],Pref[::-1])[::-1]
+        # Convert icosahedral grid into lon-lat grid
+        for lev in np.arange(d_sig):
+            v[:,:,lev,t] = interp.griddata(np.vstack([grid.lon,grid.lat]).T,vi[:,lev],(loni,lati),method='nearest')
+
+    del vii, vi
+
+    # Averaging in time and longitude.
+    if tsp > 1:
+        vl = np.mean(v[:,:,:,:],axis=1)
+        del v
+        vlt = np.mean(vl[:,:,:],axis=2)
+        del vl
+    else:
+        vlt = np.mean(v[:,:,:,0],axis=1)
+        del v
+
+    # Latitude
+    latp = np.arange(-np.pi/2,np.pi/2,res_deg)
+
+    # Now calculate stream fxn !!!
+    Stream = np.zeros_like(vlt)
+    for i in np.arange(np.shape(vlt)[0]):
+        for j in np.arange(1,np.shape(vlt)[1]):
+
+            Stream[i,j] = np.trapz(vlt[i,::-1][-j-1:],x=Pref[::-1][-j-1:])*np.cos(latp[i])
+
+    Stream *= 2*np.pi*input.A/input.Gravit
+
+    #################
+    # Create figure #
+    #################
+
+    # Contour plot
+    C = plt.contourf(latp*180/np.pi,Pref/100,Stream.T,40)
+    for cc in C.collections:
+        cc.set_edgecolor("face") #fixes a stupid bug in matplotlib 2.0
+    plt.gca().invert_yaxis()
+    if np.max(Pref)/np.min(Pref) > 100:
+        plt.gca().set_yscale("log")
+    plt.xlabel('Latitude (deg)')
+    plt.ylabel('Pressure (mba)')
+    plt.title('Time = %#.3f - %#.3f days'%(output.time[0],output.time[-1]))
+    clb = plt.colorbar(C)
+    clb.set_label(r'Stream function (kg s$^{-1}$)')
+    if not os.path.exists(input.resultsf+'/figures'):
+        os.mkdir(input.resultsf+'/figures')
+    plt.tight_layout()
+    plt.savefig(input.resultsf+'/figures/streamf_ver_i%d_l%d.pdf'%(output.ntsi,output.nts))
+    plt.close()
+
+
+def CalcE_M_AM(input,grid,output):
+    temperature = output.Pressure/(input.Rd*output.Rho)
+    dz = grid.Altitude[1]-grid.Altitude[0]
+    Vol = grid.areasT*dz
+
+    Eint = output.Rho*(input.Cp-input.Rd)*temperature
+    Eg = output.Rho*input.Gravit*grid.Altitude[None,:,None]
+    W = 0.5*(output.Wh[:,1:,:]+output.Wh[:,:-1,:])
+    Wx = W*np.cos(grid.lat[:,None,None])*np.cos(grid.lon[:,None,None])
+    Wy = W*np.cos(grid.lat[:,None,None])*np.sin(grid.lon[:,None,None])
+    Wz = W*np.sin(grid.lat[:,None,None])
+
+    Mtotx = output.Mh[0]+Wx
+    Mtoty = output.Mh[1]+Wy
+    Mtotz = output.Mh[2]+Wz
+    Mtot2 = (Mtotx)**2 + (Mtoty)**2 + (Mtotz)**2
+
+    Ek = 0.5*Mtot2/output.Rho
+
+    output.Etotal = (Eint+Eg+Ek)*Vol[:,None,None]
+    output.GlobalE = np.sum(np.sum(output.Etotal,0),0)
+
+    output.Mass = output.Rho*Vol[:,None,None]
+    output.GlobalMass = np.sum(np.sum(output.Mass,0),0)
+
+
+    r = input.A+grid.Altitude
+
+    rx = r[None,:,None]*np.cos(grid.lat[:,None,None])*np.cos(grid.lon[:,None,None])
+    ry = r[None,:,None]*np.cos(grid.lat[:,None,None])*np.sin(grid.lon[:,None,None])
+    rz = r[None,:,None]*np.sin(grid.lat[:,None,None])
+
+    output.AngMomx = (ry*Mtotz-rz*Mtoty-output.Rho*input.Omega[0]*\
+                     rz*r[None,:,None]*np.cos(grid.lat[:,None,None])*\
+                     np.cos(grid.lon[:,None,None]))*Vol[:,None,None]
+    output.AngMomy = (-rx*Mtotz+rz*Mtotx-output.Rho*input.Omega[0]*\
+                     rz*r[None,:,None]*np.cos(grid.lat[:,None,None])*\
+                     np.sin(grid.lon[:,None,None]))*Vol[:,None,None]
+    output.AngMomz = (rx*Mtoty-ry*Mtotx + output.Rho*input.Omega[0]*\
+                     r[None,:,None]**2*np.cos(grid.lat[:,None,None])*\
+                     np.cos(grid.lat[:,None,None]))*Vol[:,None,None]
+    output.GlobalAMx = np.sum(np.sum(output.AngMomx,0),0)
+    output.GlobalAMy = np.sum(np.sum(output.AngMomy,0),0)
+    output.GlobalAMz = np.sum(np.sum(output.AngMomz,0),0)
+
+def CalcEntropy(input,grid,output):
+    temperature = output.Pressure/(input.Rd*output.Rho)
+    dz = grid.Altitude[1]-grid.Altitude[0]
+    Vol = grid.areasT*dz
+    kappa = input.Rd/input.Cp
+
+    potT = temperature*(input.P_Ref/output.Pressure)**kappa
+    S = input.Cp * np.log(potT)
+    output.Entropy = S*Vol[:,None,None]
+    output.GlobalEnt = np.sum(np.sum(output.Entropy,0),0)
+
+def conservation(input,grid,output):
+    # plot quantities that are interesting for conservation
+    if output.ConvData == False:
+        print('Calculating energy, mass, angular momentum...')
+        CalcE_M_AM(input,grid,output)
+
+    CalcEntropy(input,grid,output) #should put in Thor at some point
+
+    fig = plt.figure(figsize=(12,8))
+    fig.suptitle('Time = %#.3f - %#.3f days'%(output.time[0],output.time[-1]))
+    fig.subplots_adjust(wspace=0.25,left=0.07,right=0.98,top=0.94,bottom=0.07)
+    plt.subplot(2,3,1)
+    plt.plot(output.time,output.GlobalE,'ko',linestyle='--')
+    plt.xlabel('Time (days)')
+    plt.ylabel('Total energy of atmosphere (J)')
+
+    plt.subplot(2,3,2)
+    plt.plot(output.time,output.GlobalMass,'ko',linestyle='--')
+    plt.xlabel('Time (days)')
+    plt.ylabel('Total mass of atmosphere (kg)')
+
+    plt.subplot(2,3,3)
+    plt.plot(output.time,output.GlobalAMz,'ko',linestyle='--')
+    plt.xlabel('Time (days)')
+    plt.ylabel(r'Z angular momentum of atmosphere (kg m$^2$ s$^{-1}$)')
+
+    plt.subplot(2,3,4)
+    plt.plot(output.time,output.GlobalEnt,'ko',linestyle='--')
+    plt.xlabel('Time (days)')
+    plt.ylabel('Total entropy of atmosphere (J K$^{-1}$)')
+
+    plt.subplot(2,3,5)
+    plt.plot(output.time,output.GlobalAMx,'ko',linestyle='--')
+    plt.xlabel('Time (days)')
+    plt.ylabel(r'X angular momentum of atmosphere (kg m$^2$ s$^{-1}$)')
+
+    plt.subplot(2,3,6)
+    plt.plot(output.time,output.GlobalAMy,'ko',linestyle='--')
+    plt.xlabel('Time (days)')
+    plt.ylabel(r'Y angular momentum of atmosphere (kg m$^2$ s$^{-1}$)')
+
+    if not os.path.exists(input.resultsf+'/figures'):
+        os.mkdir(input.resultsf+'/figures')
+    plt.savefig(input.resultsf+'/figures/conservation_i%d_l%d.pdf'%(output.ntsi,output.nts))
     plt.close()

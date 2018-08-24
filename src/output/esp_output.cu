@@ -64,6 +64,16 @@ __host__ void ESP::CopyToHost(){
         cudaMemcpy(pressure_h , pressure_d , point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
         cudaMemcpy(Mh_h       , Mh_d       , 3 * point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
         cudaMemcpy(mixH_h     , mixH_d     , point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(Etotal_h   , Etotal_d   , point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(Mass_h     , Mass_d     , point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(AngMomx_h  , AngMomx_d   , point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(AngMomy_h  , AngMomy_d   , point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(AngMomz_h  , AngMomz_d   , point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&GlobalE_h   , GlobalE_d    , sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&GlobalMass_h, GlobalMass_d , sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&GlobalAMx_h , GlobalAMx_d  , sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&GlobalAMy_h , GlobalAMy_d  , sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&GlobalAMz_h , GlobalAMz_d  , sizeof(double), cudaMemcpyDeviceToHost);
 }
 
 __host__ void ESP::Output(int    ntstep         , // Number of integration steps
@@ -356,7 +366,6 @@ __host__ void ESP::Output(int    ntstep         , // Number of integration steps
     H5Aclose(att);
     H5Sclose(dataspace_id);
 
-
 //  Mixing ratio H
     dims[0] = nv*point_num;
     dataspace_id = H5Screate_simple(1, dims, NULL);
@@ -370,6 +379,174 @@ __host__ void ESP::Output(int    ntstep         , // Number of integration steps
     H5Tset_size(stringType, strlen("kg m/s"));
     att    = H5Acreate(dataset_id, "units", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
     H5Awrite(att, stringType, "kg m/s");
+
+
+//  Etotal at each point
+    dims[0] = nv*point_num;
+    dataspace_id = H5Screate_simple(1, dims, NULL);
+    dataset_id = H5Dcreate2(file_id, "/Etotal", H5T_IEEE_F64LE, dataspace_id,
+                            H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    H5Dwrite(dataset_id, H5T_IEEE_F64LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, Etotal_h);
+    H5Tset_size(stringType, strlen("Total Energy"));
+    att    = H5Acreate(dataset_id, "Variable", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(att, stringType, "Total Energy");
+    H5Aclose(att);
+    H5Tset_size(stringType, strlen("kg m^2/s^2"));
+    att    = H5Acreate(dataset_id, "units", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(att, stringType, "kg m^2/s^2");
+    H5Dclose(dataset_id);
+    H5Aclose(att);
+    H5Sclose(dataspace_id);
+
+//  Mass at each point
+    dims[0] = nv*point_num;
+    dataspace_id = H5Screate_simple(1, dims, NULL);
+    dataset_id = H5Dcreate2(file_id, "/Mass", H5T_IEEE_F64LE, dataspace_id,
+                            H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    H5Dwrite(dataset_id, H5T_IEEE_F64LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, Mass_h);
+    H5Tset_size(stringType, strlen("Mass"));
+    att    = H5Acreate(dataset_id, "Variable", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(att, stringType, "Mass");
+    H5Aclose(att);
+    H5Tset_size(stringType, strlen("kg"));
+    att    = H5Acreate(dataset_id, "units", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(att, stringType, "kg");
+    H5Dclose(dataset_id);
+    H5Aclose(att);
+    H5Sclose(dataspace_id);
+
+//  AngMomx at each point
+    dims[0] = nv*point_num;
+    dataspace_id = H5Screate_simple(1, dims, NULL);
+    dataset_id = H5Dcreate2(file_id, "/AngMomx", H5T_IEEE_F64LE, dataspace_id,
+                            H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    H5Dwrite(dataset_id, H5T_IEEE_F64LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, AngMomx_h);
+    H5Tset_size(stringType, strlen("AngMom in X"));
+    att    = H5Acreate(dataset_id, "Variable", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(att, stringType, "AngMom in X");
+    H5Aclose(att);
+    H5Tset_size(stringType, strlen("kg m^2/s"));
+    att    = H5Acreate(dataset_id, "units", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(att, stringType, "kg m^2/s");
+    H5Dclose(dataset_id);
+    H5Aclose(att);
+    H5Sclose(dataspace_id);
+//
+// //  AngMomy at each point
+    dims[0] = nv*point_num;
+    dataspace_id = H5Screate_simple(1, dims, NULL);
+    dataset_id = H5Dcreate2(file_id, "/AngMomy", H5T_IEEE_F64LE, dataspace_id,
+                            H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    H5Dwrite(dataset_id, H5T_IEEE_F64LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, AngMomy_h);
+    H5Tset_size(stringType, strlen("AngMom in Y"));
+    att    = H5Acreate(dataset_id, "Variable", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(att, stringType, "AngMom in Y");
+    H5Aclose(att);
+    H5Tset_size(stringType, strlen("kg m^2/s"));
+    att    = H5Acreate(dataset_id, "units", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(att, stringType, "kg m^2/s");
+    H5Dclose(dataset_id);
+    H5Aclose(att);
+    H5Sclose(dataspace_id);
+//
+// //  AngMomz at each point
+    dims[0] = nv*point_num;
+    dataspace_id = H5Screate_simple(1, dims, NULL);
+    dataset_id = H5Dcreate2(file_id, "/AngMomz", H5T_IEEE_F64LE, dataspace_id,
+                            H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    H5Dwrite(dataset_id, H5T_IEEE_F64LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, AngMomz_h);
+    H5Tset_size(stringType, strlen("AngMom in Z"));
+    att    = H5Acreate(dataset_id, "Variable", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(att, stringType, "AngMom in Z");
+    H5Aclose(att);
+    H5Tset_size(stringType, strlen("kg m^2/s"));
+    att    = H5Acreate(dataset_id, "units", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(att, stringType, "kg m^2/s");
+    H5Dclose(dataset_id);
+    H5Aclose(att);
+    H5Sclose(dataspace_id);
+
+//  GlobalE (total energy over entire planet)
+    dims[0] = 1;
+    dataspace_id = H5Screate_simple(1, dims, NULL);
+    dataset_id = H5Dcreate2(file_id, "/GlobalE", H5T_IEEE_F64LE, dataspace_id,
+                            H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    H5Dwrite(dataset_id, H5T_IEEE_F64LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &GlobalE_h);
+    H5Tset_size(stringType, strlen("Global Total Energy"));
+    att    = H5Acreate(dataset_id, "Variable", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(att, stringType, "Global Total Energy");
+    H5Aclose(att);
+    H5Tset_size(stringType, strlen("kg m^2/s^2"));
+    att    = H5Acreate(dataset_id, "units", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(att, stringType, "kg m^2/s^2");
+    H5Dclose(dataset_id);
+    H5Aclose(att);
+    H5Sclose(dataspace_id);
+
+//  GlobalMass (total atmospheric mass over entire planet)
+    dims[0] = 1;
+    dataspace_id = H5Screate_simple(1, dims, NULL);
+    dataset_id = H5Dcreate2(file_id, "/GlobalMass", H5T_IEEE_F64LE, dataspace_id,
+                            H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    H5Dwrite(dataset_id, H5T_IEEE_F64LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &GlobalMass_h);
+    H5Tset_size(stringType, strlen("Global Mass"));
+    att    = H5Acreate(dataset_id, "Variable", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(att, stringType, "Global Mass");
+    H5Aclose(att);
+    H5Tset_size(stringType, strlen("kg"));
+    att    = H5Acreate(dataset_id, "units", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(att, stringType, "kg");
+    H5Dclose(dataset_id);
+    H5Aclose(att);
+    H5Sclose(dataspace_id);
+
+//  GlobalAMx (total angular momentum in x direction over entire planet)
+    dims[0] = 1;
+    dataspace_id = H5Screate_simple(1, dims, NULL);
+    dataset_id = H5Dcreate2(file_id, "/GlobalAMx", H5T_IEEE_F64LE, dataspace_id,
+                            H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    H5Dwrite(dataset_id, H5T_IEEE_F64LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &GlobalAMx_h);
+    H5Tset_size(stringType, strlen("Global AngMomX"));
+    att    = H5Acreate(dataset_id, "Variable", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(att, stringType, "Global AngMomX");
+    H5Aclose(att);
+    H5Tset_size(stringType, strlen("kg m^2/s"));
+    att    = H5Acreate(dataset_id, "units", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(att, stringType, "kg m^2/s");
+    H5Dclose(dataset_id);
+    H5Aclose(att);
+    H5Sclose(dataspace_id);
+
+//  GlobalAMy (total angular momentum in y direction over entire planet)
+    dims[0] = 1;
+    dataspace_id = H5Screate_simple(1, dims, NULL);
+    dataset_id = H5Dcreate2(file_id, "/GlobalAMy", H5T_IEEE_F64LE, dataspace_id,
+                            H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    H5Dwrite(dataset_id, H5T_IEEE_F64LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &GlobalAMy_h);
+    H5Tset_size(stringType, strlen("Global AngMomY"));
+    att    = H5Acreate(dataset_id, "Variable", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(att, stringType, "Global AngMomY");
+    H5Aclose(att);
+    H5Tset_size(stringType, strlen("kg m^2/s"));
+    att    = H5Acreate(dataset_id, "units", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(att, stringType, "kg m^2/s");
+    H5Dclose(dataset_id);
+    H5Aclose(att);
+    H5Sclose(dataspace_id);
+
+//  GlobalAMz (total angular momentum in y direction over entire planet)
+    dims[0] = 1;
+    dataspace_id = H5Screate_simple(1, dims, NULL);
+    dataset_id = H5Dcreate2(file_id, "/GlobalAMz", H5T_IEEE_F64LE, dataspace_id,
+                            H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    H5Dwrite(dataset_id, H5T_IEEE_F64LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &GlobalAMz_h);
+    H5Tset_size(stringType, strlen("Global AngMomZ"));
+    att    = H5Acreate(dataset_id, "Variable", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(att, stringType, "Global AngMomZ");
+    H5Aclose(att);
+    H5Tset_size(stringType, strlen("kg m^2/s"));
+    att    = H5Acreate(dataset_id, "units", stringType, stringSpace, H5P_DEFAULT, H5P_DEFAULT);
+    H5Awrite(att, stringType, "kg m^2/s");
     H5Dclose(dataset_id);
     H5Aclose(att);
     H5Sclose(dataspace_id);
