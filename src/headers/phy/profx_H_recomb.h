@@ -84,6 +84,22 @@ __global__ void ComputeMixH(double *temperature_d,
     }
 }
 
+__device__ double chemical_time_H(double *Mh_d){
+
+  return 1e-3;
+}
+
+__device__ double maxT_lev(double *temperature_d, int lev, int num, int nv) {
+  int i;
+  double maxT = 0.0;
+
+  for (i=0; i<num; i++) {
+    if (temperature_d[i*nv+lev] > maxT) maxT = temperature_d[i*nv+lev];
+  }
+
+  return maxT;
+}
+
 __global__ void recomb_H(double *Mh_d         ,
                             double *pressure_d   ,
                             double *Rho_d        ,
@@ -96,6 +112,7 @@ __global__ void recomb_H(double *Mh_d         ,
                             double *Altitudeh_d  ,
                             double *lonlat_d     ,
                             double  time_step    ,
+                            double *areasT       ,
                             int     num          ){
 
     int id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -112,29 +129,25 @@ __global__ void recomb_H(double *Mh_d         ,
       Tau_dyn = dbar/vh;
 
       //calculate chemical time scale
-      Tau_chem = chemical_time_H();
+      Tau_chem = chemical_time_H(Mh_d);
 
-      double dG, Kprime, mixH_tmp, dT, temp;
+      double mixH_tmp, dT;
 
       if (Tau_dyn > Tau_chem) {
-        temp = temperature_d[id*nv+lev];
-        dG = 2.1370867596206315e-17*temp*temp*temp*temp*temp +
-               -3.8689132818241159e-13*temp*temp*temp*temp +
-               2.7275438366298867e-09*temp*temp*temp +
-               -9.6170574202103724e-06*temp*temp +
-               -0.043948876890469453*temp +
-               216.81259827590887;
-        Kprime = exp(2000*dG/Runiv/temperature_d[id*nv+lev])*pressure_d[id*nv+lev]/100000;
-        mixH_tmp = (-1.0+sqrt(1.0+8*Kprime))/(4*Kprime);  // equilibrium mass fraction of H
+        mixH_tmp = mixH_d[id*nv+lev];
         Tau = Tau_dyn;
       } else {
-        //something here to get mixH at substellar point
-        mixH_tmp = mixH_subs;
+        double dG, Kprime, temp;
+        temp = maxT_lev(temperature_d,lev,num,nv);
+        dG = ((((2.1370867596206315e-17*temp+-3.8689132818241159e-13)*temp +\
+             2.7275438366298867e-09)*temp - 9.6170574202103724e-06)*temp +\
+             -0.043948876890469453)*temp + 216.81259827590887;
+        Kprime = exp(2000*dG/Runiv/temperature_d[id*nv+lev])*pressure_d[id*nv+lev]/100000;
+        mixH_tmp = (-1.0+sqrt(1.0+8*Kprime))/(4*Kprime);
         Tau = Tau_chem;
       }
 
-      // revise below XXX
-      dT = -(qbond*mixH_tmp/Cp - qbond*mixH_d[id*nv+lev]/Cp);
+      dT = qbond/Cp*(mixH_tmp - mixH_d[id*nv+lev])/Tau;
       temperature_d[id*nv+lev] += dT;
     }
 }

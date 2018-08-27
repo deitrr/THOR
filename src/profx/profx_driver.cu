@@ -202,6 +202,15 @@ __host__ void ESP::ProfX(int    planetnumber, // Planet ID
                                     point_num    );
       }
       if (hh2recomb) {
+        ComputeMixH<<< NB, NTH >>> (temperature_d,
+                                    pt_d         ,
+                                    pressure_d   ,
+                                    Rho_d        ,
+                                    mixH_d       ,
+                                    P_Ref        ,
+                                    Rd           ,
+                                    Cp           ,
+                                    point_num          );
         cudaDeviceSynchronize();
         recomb_H<<< NB, NTH >>> (Mh_d         ,
                                     pressure_d   ,
@@ -215,17 +224,9 @@ __host__ void ESP::ProfX(int    planetnumber, // Planet ID
                                     Altitudeh_d  ,
                                     lonlat_d     ,
                                     time_step    ,
+                                    areasT_d     ,
                                     point_num    );
         cudaDeviceSynchronize();
-        ComputeMixH<<< NB, NTH >>> (temperature_d,
-                                    pt_d         ,
-                                    pressure_d   ,
-                                    Rho_d        ,
-                                    mixH_d       ,
-                                    P_Ref        ,
-                                    Rd           ,
-                                    Cp           ,
-                                    point_num          );
       }
     }
 //
