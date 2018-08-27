@@ -51,7 +51,7 @@ __global__ void held_suarez(double *Mh_d         ,
                             double *Rho_d        ,
                             double *temperature_d,
                             double  Gravit       ,
-                            double  Cp           ,
+                            double *CpT_d        ,
                             double  Rd           ,
                             double *Altitude_d   ,
                             double *Altitudeh_d  ,
@@ -72,7 +72,7 @@ __global__ void held_suarez(double *Mh_d         ,
         double ka     = (1.0/40.0) * (1.0/86400.0);
         double kf     = 1.0/86400.0;
         double ks     = (1.0/4.0) * (1.0/86400.0);
-        double kappa  = Rd/Cp;
+        double kappa  = Rd/CpT_d[id*nv+lev];
         double dTy    = 60.0;
         double dthetaz= 10.0;
         double ps, pre  ;

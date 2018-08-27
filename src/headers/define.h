@@ -85,6 +85,7 @@
 
 // H/H2 recombination/dissociation (high temperature planets)
 #define HH2R_default false
+#define CpTemp_default false  //variable heat capacity (hydrogen)
 
 // GPU ID
 #define GPU_ID_N_default 0        // Set GPU ID number

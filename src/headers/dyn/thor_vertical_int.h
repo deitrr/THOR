@@ -16,23 +16,23 @@
 //     <http://www.gnu.org/licenses/>.
 // ==============================================================================
 //
-// 
+//
 //
 //
 // Description: Solves the vertical momentum (HE-VI scheme).
-//   
+//
 //
 // Method:
-//   Uses an implicit scheme. 
+//   Uses an implicit scheme.
 //   Tridiagonal matrix solved numerically using a Thomas algorithm.
 //
 // Known limitations: The method to solve the tridiagonal matrix can be further optimized.
 //
 // Known issues: None.
 //
-// If you use this code please cite the following reference: 
+// If you use this code please cite the following reference:
 //
-//       [1] Mendonca, J.M., Grimm, S.L., Grosheintz, L., & Heng, K., ApJ, 829, 115, 2016  
+//       [1] Mendonca, J.M., Grimm, S.L., Grosheintz, L., & Heng, K., ApJ, 829, 115, 2016
 //
 // Current Code Owner: Joao Mendonca, EEG. joao.mendonca@csh.unibe.ch
 //
@@ -45,16 +45,16 @@
 ////////////////////////////////////////////////////////////////////////
 __global__ void Vertical_Eq( double *Whs_d        ,
                              double *Ws_d         ,
-                             double *pressures_d  , 
+                             double *pressures_d  ,
                              double *h_d          ,
                              double *hh_d         ,
-                             double *Rhos_d       , 
+                             double *Rhos_d       ,
                              double *gtil_d       ,
                              double *gtilh_d      ,
-                             double *Sp_d         , 
-                             double *Sd_d         , 
-                             double *Srh_d        ,   
-                             double  Cp           ,
+                             double *Sp_d         ,
+                             double *Sd_d         ,
+                             double *Srh_d        ,
+                             double *CpT_d        ,
                              double  Rd           ,
                              double  deltat       ,
                              double  Gravit       ,
@@ -83,11 +83,10 @@ __global__ void Vertical_Eq( double *Whs_d        ,
     // define shared memory as external, because size is not known here
     extern __shared__ double mem_shared[];
 
-    
-    double * cc = (double*)mem_shared;
-    double * dd = (double*)&mem_shared[blockDim.x*nvi];    
 
-    double Cv = Cp - Rd;
+    double * cc = (double*)mem_shared;
+    double * dd = (double*)&mem_shared[blockDim.x*nvi];
+
     double C0;
     double xi, xim, xip;
     double intt, intl, inttm, intlm;
@@ -102,13 +101,16 @@ __global__ void Vertical_Eq( double *Whs_d        ,
     double hp, h, hm;
     double gp, g, gm;
     double whl, wht;
-    double GCoR = Gravit * Cv / Rd;
-    double CRdd = Cv / (Rd * deltat * deltat);
+
     double or2;
     double tor3;
 
     if(id < num){
         for (int lev = 1; lev < nv; lev++){
+            double Cv = CpT_d[id*nv+lev] - Rd;
+            double GCoR = Gravit * Cv / Rd;
+            double CRdd = Cv / (Rd * deltat * deltat);
+
             if (lev == 1){ // Fetch data for first layer
                 altht = Altitudeh_d[lev + 1];
                 althl = Altitudeh_d[lev - 1];
@@ -215,39 +217,39 @@ __global__ void Vertical_Eq( double *Whs_d        ,
                     r = Rhos_d[id*nv + lev + 1];
                     Sdl = Sd;
                     Sd = Sd_d[id*nv + lev + 1];
-                }                
+                }
             }
             else{ // DeepModel == false
-                double dzp   = 1.0/(altht - alth  ); 
-                double dzh   = 1.0/(alt - altl); 
-                double dzm   = 1.0/(alth - althl); 
+                double dzp   = 1.0/(altht - alth  );
+                double dzh   = 1.0/(alt - altl);
+                double dzm   = 1.0/(alth - althl);
                 double dzph  = dzp*dzh;
                 double dzmh  = dzm*dzh;
-                
+
                 xi  = alt  ;
                 xim = alth ;
                 xip = altht;
 
                 intt = -(xi - xip)*dzp*dzh;
                 intl =  (xi - xim)*dzp*dzh;
-                
+
                 xi  = altl;
                 xim = althl;
                 xip = alth;
 
                 inttm = -(xi - xip)*dzm*dzh;
                 intlm =  (xi - xim)*dzm*dzh;
-                            
+
                 cc[threadIdx.x*nvi + lev] = -dzph*hp - intt * (gp + GCoR);
-                
+
                 if (NonHydro)
                     bb = CRdd + (dzph + dzmh)*h + (intl - inttm)*(g + GCoR);
                 else
                     bb = (dzph + dzmh)*h + (intl - inttm)*(g + GCoR);
-                
+
                 aa = -dzmh * hm + intlm *(gm + GCoR);
-                                      
-                dSpdz  = (Sp - Spl)*dzh;            
+
+                dSpdz  = (Sp - Spl)*dzh;
                 dPdz   = (p - pl)*dzh;
 
                 xi  = alth;
@@ -257,13 +259,13 @@ __global__ void Vertical_Eq( double *Whs_d        ,
                 intt = (xi - xip)/(xim -xip);
                 intl = (xi - xim)/(xip -xim);
 
-                rhohs = rl*intt  + r*intl;    
+                rhohs = rl*intt  + r*intl;
                 Sdh   = Sdl*intt + Sd*intl;
 
                 if(!NonHydro){
-                    C0 = (pow(deltat, 2.0)*dSpdz    
+                    C0 = (pow(deltat, 2.0)*dSpdz
                        + pow(deltat, 2.0)*Gravit*Sdh
-                       + Gravit*deltat*rhohs 
+                       + Gravit*deltat*rhohs
                        + deltat*dPdz
                        - deltat*Srh_d[id*nvi + lev])*(CRdd);
                 }
@@ -271,7 +273,7 @@ __global__ void Vertical_Eq( double *Whs_d        ,
                     C0 = (-Whs_d[id*nvi + lev]
                         + pow(deltat, 2.0)*dSpdz
                         + pow(deltat, 2.0)*Gravit*Sdh
-                        + Gravit*deltat*rhohs 
+                        + Gravit*deltat*rhohs
                         + deltat*dPdz
                         - deltat*Srh_d[id*nvi + lev])*(CRdd);
                 }
@@ -298,7 +300,7 @@ __global__ void Vertical_Eq( double *Whs_d        ,
                     Sd = Sd_d[id*nv + lev + 1];
                 }
 
-            }  // End of if (DeepModel) physics computation              
+            }  // End of if (DeepModel) physics computation
 
             dd[threadIdx.x*nvi + lev] = -C0;
             if(lev == 1){
@@ -309,10 +311,10 @@ __global__ void Vertical_Eq( double *Whs_d        ,
                 t = 1.0 / (bb - cc[threadIdx.x*nvi + lev - 1] * aa);
                 cc[threadIdx.x*nvi + lev] *= t;
                 dd[threadIdx.x*nvi + lev] = (dd[threadIdx.x*nvi + lev] - dd[threadIdx.x*nvi + lev - 1] * aa) * t;
-            }    
+            }
         }
         Whs_d[id*nvi + nv]      = 0.0;
-        Whs_d[id*nvi]           = 0.0; 
+        Whs_d[id*nvi]           = 0.0;
         Whs_d[id*nvi + nv - 1] = dd[threadIdx.x*nvi + nv-1];
         // Updates vertical momentum
         for (int lev = nvi - 2; lev > 0; lev--)
@@ -355,10 +357,10 @@ __global__ void Prepare_Implicit_Vertical(double *Mh_d          ,
                                           double *Sp_d          ,
                                           double *Sd_d          ,
                                           double *Altitude_d    ,
-                                          double  Cp            ,
+                                          double *CpT_d         ,
                                           double  Rd            ,
                                           double  A             ,
-                                          int    *maps_d        , 
+                                          int    *maps_d        ,
                                           int     nl_region     ,
                                           bool    DeepModel     ){
 
@@ -383,13 +385,14 @@ __global__ void Prepare_Implicit_Vertical(double *Mh_d          ,
 
     int pent_ind = 0;
     double alt, rscale;
-    double RoC = Rd / (Cp - Rd);
 
-    //     
+    //
     // Load shared memory
     ig = maps_d[ib*nhl2 + ir];
     id = ig;
     if (x == 0 && y == 0) if(maps_d[ib * nhl2] == -1) pent_ind = 1;
+
+    double RoC = Rd / (CpT_d[id*nv+lev] - Rd);
 
     v_s[ir * 3 + 0] = Mh_d[ig * 3 * nv + lev * 3 + 0];
     v_s[ir * 3 + 1] = Mh_d[ig * 3 * nv + lev * 3 + 1];
@@ -472,7 +475,7 @@ __global__ void Prepare_Implicit_Vertical(double *Mh_d          ,
     nflxp_s[iri] = 0.0;
 
     for (int k = 0; k < 3; k++){
-        
+
         div0 = div_d[id * 7 * 3 + 3 * 0 + k];
         div1 = div_d[id * 7 * 3 + 3 * 1 + k];
         div2 = div_d[id * 7 * 3 + 3 * 2 + k];
@@ -496,7 +499,7 @@ __global__ void Prepare_Implicit_Vertical(double *Mh_d          ,
                                         div4 * v_s[pt4 * 3 + k]* h_s[pt4] +
                                         div5 * v_s[pt5 * 3 + k]* h_s[pt5] +
                                         div6 * v_s[pt6 * 3 + k]* h_s[pt6]);
-                                        
+
     }
 
     Sp_d[id * nv + lev] = nflxp_s[iri] + Slowpressure_d[id * nv + lev];
@@ -512,7 +515,7 @@ __global__ void Prepare_Implicit_Vertical_Poles(double *Mh_d          ,
                                                 double *Sp_d          ,
                                                 double *Sd_d          ,
                                                 double *Altitude_d    ,
-                                                double  Cp            ,
+                                                double *CpT_d         ,
                                                 double  Rd            ,
                                                 double  A             ,
                                                 int    *point_local_d ,
@@ -532,12 +535,13 @@ __global__ void Prepare_Implicit_Vertical_Poles(double *Mh_d          ,
     double nflxp_p;
 
     double alt, rscale;
-    double Cv = Cp - Rd;
+
     if (id < num){
         for (int i = 0; i < 5; i++)local_p[i] = point_local_d[id * 6 + i];
         for (int i = 0; i < 7; i++) for (int k = 0; k < 3; k++) div_p[i * 3 + k] = div_d[id * 7 * 3 + i * 3 + k];
 
         for (int lev = 0; lev < nv; lev++){
+            double Cv = CpT_d[id*nv+lev] - Rd;
             v_p[0] = Mh_d[id * 3 * nv + lev * 3 + 0];
             v_p[1] = Mh_d[id * 3 * nv + lev * 3 + 1];
             v_p[2] = Mh_d[id * 3 * nv + lev * 3 + 2];

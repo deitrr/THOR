@@ -103,7 +103,11 @@ public:
     double *Kdhz_h        ;
     double *Kdh4_h        ;
     bool    check_h       ;
+
+    // atmospheric chemistry
     double *mixH_h        ; //atomic hydrogen mixing ratio (for very hot planets)
+    double *CpT_h         ;
+
     int *zonal_mean_tab_h ;
     double Rv_sponge      ;
     double ns_sponge      ;
@@ -194,7 +198,12 @@ public:
     double *diff_d        ;
     double *divg_Mh_d     ;
     bool   *check_d       ;
-    double *mixH_d        ; //atomic hydrogen mixing ratio (for very hot planets)
+
+    // atmospheric chemistry
+    double *mixH_d        ; // atomic hydrogen mixing ratio (for very hot planets)
+    double *CpT_d         ; // temp dependent heat capacity
+    double *RdT_d         ; // temp dependent gas constant ???
+
     double *vbar_d        ;
     int *zonal_mean_tab_d ;
 //  Arrays used in RT code
@@ -287,6 +296,7 @@ public:
                        int hstest               ,
                        int & nsteps             ,
                        bool hh2recomb           ,
+                       bool CpTemp              ,
                        double & simulation_start_time,
                        int & output_file_idx);
 
@@ -331,7 +341,8 @@ public:
                int   ,
                bool  ,
                bool  ,
-               bool);
+               bool  ,
+               bool  );
 
     void CopyToHost();
 

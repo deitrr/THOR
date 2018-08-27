@@ -63,21 +63,21 @@ __global__ void Compute_temperature (double *temperature_d,
                                      double *Rho_d        ,
                                      double  P_Ref        ,
                                      double  Rd           ,
-                                     double  Cp           ,
+                                     double *CpT_d        ,
                                      int     num          ){
 
     int id = blockIdx.x * blockDim.x + threadIdx.x;
     int nv = gridDim.y;
     int lev = blockIdx.y;
 
-    double Cv = Cp - Rd;
-    double CvoCp = Cv / Cp;
-
     // Computes absolute and potential temperature
     if(id < num) {
+      double Cv = CpT_d[id*nv+lev] - Rd;
+      double CvoCp = Cv / CpT_d[id*nv+lev];
+
       temperature_d[id*nv + lev] = pressure_d[id*nv + lev]/(Rd*Rho_d[id*nv + lev]);
+      pt_d[id * nv + lev] = (P_Ref / (Rd * Rho_d[id*nv + lev]))*pow(pressure_d[id*nv + lev] / P_Ref, CvoCp);
     }
-    if(id < num) pt_d[id * nv + lev] = (P_Ref / (Rd * Rho_d[id*nv + lev]))*pow(pressure_d[id*nv + lev] / P_Ref, CvoCp);
 }
 
 __global__ void Compute_pressure    (double *pressure_d   ,

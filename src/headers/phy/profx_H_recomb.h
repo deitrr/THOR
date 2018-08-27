@@ -60,7 +60,7 @@ __global__ void ComputeMixH(double *temperature_d,
                                      double *mixH_d       ,
                                      double  P_Ref        ,
                                      double  Rd           ,
-                                     double  Cp           ,
+                                     double *CpT_d        ,
                                      int     num          ){
 
 // calculate mixing ratio of atomic H via formulae in Heng book
@@ -106,7 +106,7 @@ __global__ void recomb_H(double *Mh_d         ,
                             double *temperature_d,
                             double *mixH_d       ,
                             double  Gravit       ,
-                            double  Cp           ,
+                            double *CpT_d        ,
                             double  Rd           ,
                             double *Altitude_d   ,
                             double *Altitudeh_d  ,
@@ -147,7 +147,26 @@ __global__ void recomb_H(double *Mh_d         ,
         Tau = Tau_chem;
       }
 
-      dT = qbond/Cp*(mixH_tmp - mixH_d[id*nv+lev])/Tau;
+      dT = qbond/CpT_d[id*nv+lev]*(mixH_tmp - mixH_d[id*nv+lev])/Tau;
       temperature_d[id*nv+lev] += dT;
     }
+}
+
+__global__ void HeatCapTemp(double *temperature_d,
+                            double *CpT_d        ,
+                            int     num          ){
+/* calculates temperature dependent heat capacity for H2
+   in the range 1000 - 6000 k using power law fit to Chase 1998*/
+  int id = blockIdx.x * blockDim.x + threadIdx.x;
+  int nv = gridDim.y;
+  int lev = blockIdx.y;
+
+  if (id < num){
+    double Cp0 = 18567.9235606;
+    double T0 = 3150.95;
+    double nu = 0.183215136;
+
+    // q: is temperature_d up to date when this is called???
+    CpT_d[id*nv+lev] = Cp0*pow(temperature_d[id*nv+lev]/T0,nu);
+  }
 }

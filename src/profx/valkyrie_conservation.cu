@@ -21,7 +21,7 @@ __global__ void CalcTotEnergy(double *Etotal_d     ,
                               double *Rho_d        ,
                               double *temperature_d,
                               double  Gravit       ,
-                              double  Cp           ,
+                              double *CpT_d        ,
                               double  Rd           ,
                               double  A            ,
                               double *Altitude_d   ,
@@ -38,7 +38,7 @@ __global__ void CalcTotEnergy(double *Etotal_d     ,
     if (id < num){
       double Ek, Eint, Eg;
       double wx, wy, wz;
-      double Cv = Cp - Rd;
+      double Cv = CpT_d[id*nv+lev] - Rd;
 
       //calculate control volume
       double zup, zlow, Vol;

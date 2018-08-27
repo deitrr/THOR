@@ -16,22 +16,22 @@
 //     <http://www.gnu.org/licenses/>.
 // ==============================================================================
 //
-// 
+//
 //
 //
 // Description: Computes the slow modes (see equations 33 to 35 from Mendonca et al. 2016)
-//   
+//
 //
 // Method: -
 //
 // Known limitations: None.
 //
 // Known issues: None.
-//   
 //
-// If you use this code please cite the following reference: 
 //
-//       [1] Mendonca, J.M., Grimm, S.L., Grosheintz, L., & Heng, K., ApJ, 829, 115, 2016  
+// If you use this code please cite the following reference:
+//
+//       [1] Mendonca, J.M., Grimm, S.L., Grosheintz, L., & Heng, K., ApJ, 829, 115, 2016
 //
 // Current Code Owner: Joao Mendonca, EEG. joao.mendonca@csh.unibe.ch
 //
@@ -67,10 +67,10 @@ __global__ void Compute_Slow_Modes(double *SlowMh_d      ,
                                    double *Altitudeh_d   ,
                                    double  A             ,
                                    double  Gravit        ,
-                                   double  Cp            ,
+                                   double *CpT_d         ,
                                    double  Rd            ,
                                    double *func_r_d      ,
-                                   int    *maps_d        , 
+                                   int    *maps_d        ,
                                    int     nl_region     ,
                                    bool    DeepModel     ,
                                    bool    NonHydro      ){
@@ -106,7 +106,7 @@ __global__ void Compute_Slow_Modes(double *SlowMh_d      ,
 
     double hhl, hht, dwhdz;
     double pressurel;
-    double Cv = Cp - Rd;
+
     double funcx, funcy, funcz;
 
     int ir = (y + 1)*nhl + x + 1;   // Region index
@@ -129,6 +129,8 @@ __global__ void Compute_Slow_Modes(double *SlowMh_d      ,
     id = ig;
     pent_ind = 0;
     if (x == 0 && y == 0) if(maps_d[ib * nhl2] == -1) pent_ind = 1;
+
+    double Cv = CpT_d[id*nv+lev] - Rd;
 
     v_s[ir * 3 + 0] = Mh_d[ig * 3 * nv + lev * 3 + 0];
     v_s[ir * 3 + 1] = Mh_d[ig * 3 * nv + lev * 3 + 1];
@@ -216,19 +218,19 @@ __global__ void Compute_Slow_Modes(double *SlowMh_d      ,
     if (lev != 0){
         advxl     = Adv_d[id * 3 * nv + (lev - 1) * 3 + 0];
         advyl     = Adv_d[id * 3 * nv + (lev - 1) * 3 + 1];
-        advzl     = Adv_d[id * 3 * nv + (lev - 1) * 3 + 2];            
+        advzl     = Adv_d[id * 3 * nv + (lev - 1) * 3 + 2];
         advrl     = advxl * funcx + advyl * funcy + advzl * funcz;
         rhol      = Rho_d[id * nv + lev-1];
         altl      = Altitude_d[lev - 1];
         pressurel = pressure_d[id * nv + lev - 1];
     }
-        
+
     advr = advx * funcx + advy * funcy + advz * funcz;
 
     advx += -advr * funcx;
     advy += -advr * funcy;
     advz += -advr * funcz;
-    
+
     // Neighbours
     pt1 = (y + 2)*nhl + x + 1;
     pt2 = (y + 2)*nhl + x + 2;
@@ -266,7 +268,7 @@ __global__ void Compute_Slow_Modes(double *SlowMh_d      ,
         div4 = div_d[id * 7 * 3 + 3 * 4 + k];
         div5 = div_d[id * 7 * 3 + 3 * 5 + k];
         div6 = div_d[id * 7 * 3 + 3 * 6 + k];
-            
+
         nflxv_s[iri * 3 + k] = rscale*(grad_d[id * 7 * 3 + 3 * 0 + k] * pressure_s[ir]  +
                                        grad_d[id * 7 * 3 + 3 * 1 + k] * pressure_s[pt1] +
                                        grad_d[id * 7 * 3 + 3 * 2 + k] * pressure_s[pt2] +
@@ -310,7 +312,7 @@ __global__ void Compute_Slow_Modes(double *SlowMh_d      ,
 
 //Mh
     dpr = nflxv_s[iri * 3 + 0] * funcx + nflxv_s[iri * 3 + 1] * funcy + nflxv_s[iri * 3 + 2] * funcz;
-            
+
     SlowMh_d[id * 3 * nv + lev * 3 + 0] = -(nflxv_s[iri * 3 + 0] - dpr * funcx) - advx + DivM_d[id * 3 * nv + lev * 3 + 0] + diffmh_d[id * 3 * nv + lev * 3 + 0];
     SlowMh_d[id * 3 * nv + lev * 3 + 1] = -(nflxv_s[iri * 3 + 1] - dpr * funcy) - advy + DivM_d[id * 3 * nv + lev * 3 + 1] + diffmh_d[id * 3 * nv + lev * 3 + 1];
     SlowMh_d[id * 3 * nv + lev * 3 + 2] = -(nflxv_s[iri * 3 + 2] - dpr * funcz) - advz + DivM_d[id * 3 * nv + lev * 3 + 2] + diffmh_d[id * 3 * nv + lev * 3 + 2];
@@ -375,7 +377,7 @@ __global__ void Compute_Slow_Modes_Poles(double *SlowMh_d      ,
                                          double *Altitudeh_d   ,
                                          double  A             ,
                                          double  Gravit        ,
-                                         double  Cp            ,
+                                         double *CpT_d         ,
                                          double  Rd            ,
                                          double *func_r_d      ,
                                          int    *point_local_d ,
@@ -405,7 +407,6 @@ __global__ void Compute_Slow_Modes_Poles(double *SlowMh_d      ,
     double swr, dpdz, vgp;
 
     double hhl, hht, dwhdz;
-    double Cv = Cp - Rd;
     double pressurel;
 
     /////////////////////////////////////////
@@ -432,6 +433,7 @@ __global__ void Compute_Slow_Modes_Poles(double *SlowMh_d      ,
         for (int i = 0; i < 7; i++) for (int k = 0; k < 3; k++) grad_p[i * 3 + k] = grad_d[id * 7 * 3 + i * 3 + k];
 
         for (int lev = 0; lev < nv; lev++){
+            double Cv = CpT_d[id*nv+lev] - Rd;
 
             v_p[0] = Mh_d[id * 3 * nv + lev * 3 + 0];
             v_p[1] = Mh_d[id * 3 * nv + lev * 3 + 1];
@@ -442,32 +444,32 @@ __global__ void Compute_Slow_Modes_Poles(double *SlowMh_d      ,
                 v_p[i * 3 + 0] = Mh_d[local_p[i - 1] * 3 * nv + lev * 3 + 0];
                 v_p[i * 3 + 1] = Mh_d[local_p[i - 1] * 3 * nv + lev * 3 + 1];
                 v_p[i * 3 + 2] = Mh_d[local_p[i - 1] * 3 * nv + lev * 3 + 2];
-    
+
                 pressure_p[i] = pressure_d[local_p[i - 1] * nv + lev];
                 h_p[i] = h_d[local_p[i - 1] * nv + lev];
             }
-    
+
             advx = Adv_d[id * 3 * nv + lev * 3 + 0];
             advy = Adv_d[id * 3 * nv + lev * 3 + 1];
             advz = Adv_d[id * 3 * nv + lev * 3 + 2];
-    
+
             if (lev > 0) advrl = advrt;
             advrt = advx * func_r_p[0] + advy * func_r_p[1] + advz * func_r_p[2];
-    
+
             advx += -advrt * func_r_p[0];
             advy += -advrt * func_r_p[1];
             advz += -advrt * func_r_p[2];
-    
+
             if (lev == 0){
                 altht = Altitudeh_d[lev + 1];
                 althl = Altitudeh_d[lev];
             }
             if (lev > 0) altl = alt;
             alt = Altitude_d[lev];
-    
+
             if (lev > 0) rhol = rhot;
             rhot = Rho_d[id*nv + lev];
-    
+
             if (DeepModel){
                 r2p = pow(altht + A, 2.0);
                 r2m = pow(alt + A, 2.0);
@@ -480,10 +482,10 @@ __global__ void Compute_Slow_Modes_Poles(double *SlowMh_d      ,
                 r2l = 1.0;
                 rscale = 1.0;
             }
-    
+
             nflxr_p = 0.0;
             nflxp_p = 0.0;
-    
+
             for (int k = 0; k < 3; k++){
                 nflxv_p[k] = rscale*(grad_p[3 * 0 + k] * pressure_p[0] +
                                      grad_p[3 * 1 + k] * pressure_p[1] +
@@ -491,14 +493,14 @@ __global__ void Compute_Slow_Modes_Poles(double *SlowMh_d      ,
                                      grad_p[3 * 3 + k] * pressure_p[3] +
                                      grad_p[3 * 4 + k] * pressure_p[4] +
                                      grad_p[3 * 5 + k] * pressure_p[5]);
-    
+
                 nflxr_p += rscale*(div_p[3 * 0 + k] * v_p[0 * 3 + k] +
                                    div_p[3 * 1 + k] * v_p[1 * 3 + k] +
                                    div_p[3 * 2 + k] * v_p[2 * 3 + k] +
                                    div_p[3 * 3 + k] * v_p[3 * 3 + k] +
                                    div_p[3 * 4 + k] * v_p[4 * 3 + k] +
                                    div_p[3 * 5 + k] * v_p[5 * 3 + k]);
-    
+
                 nflxp_p += rscale*(div_p[3 * 0 + k] * v_p[0 * 3 + k] * h_p[0] +
                                    div_p[3 * 1 + k] * v_p[1 * 3 + k] * h_p[1] +
                                    div_p[3 * 2 + k] * v_p[2 * 3 + k] * h_p[2] +
@@ -506,21 +508,21 @@ __global__ void Compute_Slow_Modes_Poles(double *SlowMh_d      ,
                                    div_p[3 * 4 + k] * v_p[4 * 3 + k] * h_p[4] +
                                    div_p[3 * 5 + k] * v_p[5 * 3 + k] * h_p[5]);
             }
-    
+
             if (lev == 0){
                 whl = 0.0;
                 wht = Wh_d[id*(nv + 1) + lev + 1];
                 hhl = 0.0;
                 hht = hh_d[id*(nv + 1) + lev + 1];
             }
-    
+
             dz = altht - althl;
             dwdz = (wht*r2p - whl*r2l) / (dz*r2m);
             dwhdz = (wht*r2p*hht - whl*r2l*hhl) / (dz*r2m);
-    
+
             // Mh
             dpr = nflxv_p[0] * func_r_p[0] + nflxv_p[1] * func_r_p[1] + nflxv_p[2] * func_r_p[2];
-    
+
             SlowMh_d[id * 3 * nv + lev * 3 + 0] = -(nflxv_p[0] - dpr * func_r_p[0]) - advx + DivM_d[id * 3 * nv + lev * 3 + 0] + diffmh_d[id * 3 * nv + lev * 3 + 0];
             SlowMh_d[id * 3 * nv + lev * 3 + 1] = -(nflxv_p[1] - dpr * func_r_p[1]) - advy + DivM_d[id * 3 * nv + lev * 3 + 1] + diffmh_d[id * 3 * nv + lev * 3 + 1];
             SlowMh_d[id * 3 * nv + lev * 3 + 2] = -(nflxv_p[2] - dpr * func_r_p[2]) - advz + DivM_d[id * 3 * nv + lev * 3 + 2] + diffmh_d[id * 3 * nv + lev * 3 + 2];
@@ -533,19 +535,19 @@ __global__ void Compute_Slow_Modes_Poles(double *SlowMh_d      ,
                 xi = althl;
                 xim = altl;
                 xip = alt;
-    
+
                 intt = (xi - xip) / (xim - xip);
                 intl = (xi - xim) / (xip - xim);
                 if (NonHydro)    swr = (-diffw_d[id * nv + lev - 1] + advrl + rhol * Gravit)*intt + (-diffw_d[id * nv + lev] + advrt + rhot * Gravit)*intl;
                 else            swr = (-diffw_d[id * nv + lev - 1]         + rhol * Gravit)*intt + (-diffw_d[id * nv + lev]         + rhot * Gravit)*intl;
-    
+
                 dz = alt - altl;
                 dpdz = (pressure_p[0] - pressurel) / dz;
                 swr = swr + dpdz;
-    
+
                 SlowWh_d[id*(nv + 1) + lev] = -swr;
             }
-    
+
             // Rho
             nflxr_p += dwdz;
             SlowRho_d[id * nv + lev] = -nflxr_p + diffrh_d[id * nv + lev];
@@ -555,9 +557,9 @@ __global__ void Compute_Slow_Modes_Poles(double *SlowMh_d      ,
             vgp = (nflxv_p[0] - dpr * func_r_p[0]) * v_p[0] * r +
                   (nflxv_p[1] - dpr * func_r_p[1]) * v_p[1] * r +
                   (nflxv_p[2] - dpr * func_r_p[2]) * v_p[2] * r ;
-    
+
             Slowpressure_d[id * nv + lev] = (Rd / Cv)*(-nflxp_p - gtil_d[id * nv + lev] - dwhdz + vgp) + diffpr_d[id * nv + lev];
-        
+
             if (lev < nv - 1){
                 pressurel = pressure_p[0];
 

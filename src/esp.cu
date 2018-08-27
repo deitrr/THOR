@@ -240,6 +240,9 @@ int main (int argc,  char** argv){
     bool HH2R = false;
     config_reader.append_config_var("HH2R", HH2R, HH2R_default);
 
+    bool CpTemp = false;
+    config_reader.append_config_var("CpTemp", CpTemp, CpTemp_default);
+
     //*****************************************************************
     // Read config file
 
@@ -457,6 +460,7 @@ int main (int argc,  char** argv){
                                         hstest       , // argh
                                         step_idx     , // current step index
                                         HH2R         ,
+                                        CpTemp       ,
                                         simulation_start_time, // output:
                                                                // simulation start time
                                         output_file_idx); // output file
@@ -705,9 +709,10 @@ int main (int argc,  char** argv){
                Planet.A     , // Planet radius [m]
                n_out        ,
                DeepModel    ,
-               SpongeLayer,
+               SpongeLayer  ,
                shrink_sponge,
-               HH2R        );
+               HH2R         ,
+               CpTemp       );
 
        // compute simulation time
        simulation_time = simulation_start_time + (nstep - step_idx+1)*timestep;

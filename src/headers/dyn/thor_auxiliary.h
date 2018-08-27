@@ -55,7 +55,7 @@ __global__ void Compute_Temperature_H_Pt_Geff(double * temperature_d,
                                               double * Wh_d         ,
                                               double   P_Ref        ,
                                               double   Gravit       ,
-                                              double   Cp           ,
+                                              double * CpT_d        ,
                                               double   Rd           ,
                                               double * Altitude_d   ,
                                               double * Altitudeh_d  ,
@@ -78,8 +78,7 @@ __global__ void Compute_Temperature_H_Pt_Geff(double * temperature_d,
     double pressure, h, hl, pt, ptl, pl, pp, dpdz;
     double gtilh, gtilht;
     double dz, dp_dz;
-    double Cv = Cp - Rd;
-    double CvoCp = Cv / Cp;
+    double Cv, CvoCp;
 
     double xi, xim, xip;
     double intt, intl;
@@ -88,6 +87,8 @@ __global__ void Compute_Temperature_H_Pt_Geff(double * temperature_d,
     if (id < num){
         for (int lev = 0; lev < nv+1; lev++){
             if (lev < nv){
+                Cv = CpT_d[id*nv+lev] - Rd;
+                CvoCp = Cv / CpT_d[id*nv+lev];
                 if (lev > 0){
                     pl = pressure;
                     rhol = rho;
@@ -109,6 +110,9 @@ __global__ void Compute_Temperature_H_Pt_Geff(double * temperature_d,
                 temperature_d[id*nv + lev] = temperature;
                 h_d[id * nv + lev]  = h;
                 pt_d[id * nv + lev] = pt;
+            } else if (lev == nv) {
+                Cv = CpT_d[id*nv+lev-1] - Rd;
+                CvoCp = Cv / CpT_d[id*nv+lev-1];
             }
             if (lev == 0){
                 hh_d[id*(nv + 1) + 0] = h;

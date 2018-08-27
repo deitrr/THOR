@@ -70,10 +70,11 @@ __host__ void ESP::ProfX(int    planetnumber, // Planet ID
                          double Gravit      , // Gravity [m/s^2]
                          double A           ,// Planet radius [m]
                          bool   DeepModel   ,
-                         int    n_out        , // output step (triggers conservation calc)
+                         int    n_out       , // output step (triggers conservation calc)
                          bool   sponge      ,// sponge layer on/off
                          bool   shrink_sponge, // Shrink sponge after some time
-                         bool hh2recomb     ){// option of atomic H<->H2
+                         bool hh2recomb     ,
+                         bool CpTemp        ){// option of atomic H<->H2
     USE_BENCHMARK()
 //
 //  Number of threads per block.
@@ -128,7 +129,7 @@ __host__ void ESP::ProfX(int    planetnumber, // Planet ID
                                          Rho_d        ,
                                          P_Ref        ,
                                          Rd           ,
-                                         Cp           ,
+                                         CpT_d        ,
                                          point_num    );
 
     BENCH_POINT_I(current_step, "phy_T", vector<string>({}), vector<string>({"Rho_d", "pressure_d", "Mh_d", "Wh_d", "temperature_d", "W_d"}))
@@ -151,7 +152,7 @@ __host__ void ESP::ProfX(int    planetnumber, // Planet ID
                                     Rho_d        ,
                                     temperature_d,
                                     Gravit       ,
-                                    Cp           ,
+                                    CpT_d        ,
                                     Rd           ,
                                     Altitude_d   ,
                                     Altitudeh_d  ,
@@ -165,7 +166,7 @@ __host__ void ESP::ProfX(int    planetnumber, // Planet ID
                                     Rho_d        ,
                                     temperature_d,
                                     Gravit       ,
-                                    Cp           ,
+                                    CpT_d        ,
                                     Rd           ,
                                     Altitude_d   ,
                                     Altitudeh_d  ,
@@ -209,7 +210,7 @@ __host__ void ESP::ProfX(int    planetnumber, // Planet ID
                                     mixH_d       ,
                                     P_Ref        ,
                                     Rd           ,
-                                    Cp           ,
+                                    CpT_d        ,
                                     point_num          );
         cudaDeviceSynchronize();
         recomb_H<<< NB, NTH >>> (Mh_d         ,
@@ -218,7 +219,7 @@ __host__ void ESP::ProfX(int    planetnumber, // Planet ID
                                     temperature_d,
                                     mixH_d       ,
                                     Gravit       ,
-                                    Cp           ,
+                                    CpT_d        ,
                                     Rd           ,
                                     Altitude_d   ,
                                     Altitudeh_d  ,
@@ -247,7 +248,7 @@ __host__ void ESP::ProfX(int    planetnumber, // Planet ID
                                        fnet_dn_d    ,
                                        tau_d        ,
                                        Gravit       ,
-                                       Cp           ,
+                                       CpT_d        ,
                                        lonlat_d     ,
                                        Altitude_d   ,
                                        Altitudeh_d  ,
@@ -309,6 +310,7 @@ __host__ void ESP::ProfX(int    planetnumber, // Planet ID
 
     BENCH_POINT_I(current_step, "phy_END", vector<string>({}), vector<string>({"Rho_d", "pressure_d", "Mh_d", "Wh_d", "temperature_d", "W_d"}))
 
+
     if(nstep % n_out == 0) {
     // calculate quantities we hope to conserve!
       cudaMemset(GlobalE_d     , 0, sizeof(double));
@@ -334,7 +336,7 @@ __host__ void ESP::ProfX(int    planetnumber, // Planet ID
                                      Rho_d        ,
                                      temperature_d,
                                      Gravit       ,
-                                     Cp           ,
+                                     CpT_d        ,
                                      Rd           ,
                                      A            ,
                                      Altitude_d   ,
@@ -360,6 +362,10 @@ __host__ void ESP::ProfX(int    planetnumber, // Planet ID
                                    areasT_d     ,
                                    point_num    ,
                                    DeepModel    );
+     }
+
+     if (CpTemp) {  // update heat capacity based on new temperature
+       HeatCapTemp <<< NB, NTH >>> (temperature_d, CpT_d, point_num);
      }
 
 //

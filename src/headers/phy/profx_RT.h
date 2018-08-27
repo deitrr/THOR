@@ -34,7 +34,7 @@ __device__ void radcsw(double *phtemp         ,
                        double  alb        ,
                        double  tausw      ,
                        double  ps0        ,
-                       double  Cp         ,
+                       double *CpT_d      ,
                        double  gravit     ,
                        int     id         ,
                        int     nv         ){
@@ -59,7 +59,7 @@ __device__ void radcsw(double *phtemp         ,
 	// Update temperature rates.
   // if (id==0) printf("shortwave down = \n");
   for(int lev = 0;lev < nv;lev++){
-        gocp  = gravit/Cp;
+        gocp  = gravit/CpT_d[id*nv+lev];
         dtemp[id*nv+lev]     = gocp * ((fnet_up_d[id*(nv+1) + lev] - fnet_dn_d[id*(nv+1) + lev]) - (fnet_up_d[id*(nv+1) + lev+1] - fnet_dn_d[id*(nv+1) + lev+1])) / (phtemp[id*(nv+1)+lev] - phtemp[id*(nv+1)+lev +1]);
 
         // if (isnan(dtemp[id*nv+lev])) {
@@ -120,12 +120,11 @@ __device__ void radclw(double *phtemp         ,
                        double *fnet_dn_d  ,
 					   double diff_fac    ,
 					   double tlow          ,
-                       double Cp          ,
+                       double *CpT_d       ,
                        double gravit      ,
                        int    id          ,
                        int    nv          ){
 
-    double gocp = gravit/Cp;
     double tb, tl, tt;
     double bb, bl, bt;
 
@@ -137,6 +136,7 @@ __device__ void radclw(double *phtemp         ,
 //
    fnet_dn_d[id*(nv+1) + nv] = 0.0; // Upper boundary
     for(int lev = nv-1;lev >= 0; lev--){
+
         double ed = 0.0;
         if(tau_d[id*nv*2 + 2*lev + 1] < 0.0) tau_d[id*nv*2 + 2*lev + 1] = 0.0;
 
@@ -178,6 +178,7 @@ __device__ void radclw(double *phtemp         ,
 
     // if(id==0) printf("\nlongwave down = \n");
     for(int lev = 0;lev < nv;lev++) {
+        double gocp = gravit/CpT_d[id*nv+lev];
         dtemp[id*nv+lev] = dtemp[id*nv+lev] + gocp * ((fnet_up_d[id*(nv+1) + lev] - fnet_dn_d[id*(nv+1) + lev]) - (fnet_up_d[id*(nv+1) + lev+1] - fnet_dn_d[id*(nv+1) + lev+1])) /
                                     (phtemp[id*(nv+1)+lev] - phtemp[id*(nv+1)+lev + 1]);
 
@@ -215,7 +216,7 @@ __global__ void rtm_dual_band (double *pressure_d   ,
                                double *fnet_dn_d    ,
                                double *tau_d        ,
                                double  gravit       ,
-                               double  Cp           ,
+                               double *CpT_d        ,
                                double *lonlat_d     ,
                                double *Altitude_d   ,
                                double *Altitudeh_d  ,
@@ -369,7 +370,7 @@ __global__ void rtm_dual_band (double *pressure_d   ,
                       alb        ,
                       tausw      ,
                       ps0        ,
-                      Cp         ,
+                      CpT_d      ,
                       gravit     ,
                       id         ,
                       nv         );
@@ -392,7 +393,7 @@ __global__ void rtm_dual_band (double *pressure_d   ,
                fnet_dn_d,
                diff_fac ,
                tlow     ,
-               Cp       ,
+               CpT_d    ,
                gravit   ,
                id       ,
                nv       );
