@@ -366,6 +366,7 @@ __host__ void ESP::ProfX(int    planetnumber, // Planet ID
 
      if (CpTemp) {  // update heat capacity based on new temperature
        HeatCapTemp <<< NB, NTH >>> (temperature_d, CpT_d, point_num);
+       //do I need to update Cp during thor integration??? (small/rk steps)
      }
 
 //
