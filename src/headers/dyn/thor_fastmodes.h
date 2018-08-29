@@ -265,7 +265,8 @@ __global__ void Density_Pressure_Eqs(double *pressure_d ,
                                      double  dt         ,
                                      int *maps_d        ,
                                      int nl_region      ,
-                                     bool DeepModel     ){
+                                     bool DeepModel     ,
+                                     bool CpTemp        ){
 
     int x = threadIdx.x;
     int y = threadIdx.y;
@@ -471,7 +472,34 @@ __global__ void Density_Pressure_Eqs(double *pressure_d ,
     aux += pt_s[ir]*r;
 
     // Updates pressure
-    p = P_Ref*pow(Rd*aux / P_Ref, CpT_d[id*nv+lev] / Cv);
+    if (CpTemp) {
+      // need to solve a transcendental eqn for p!
+      // let's try expanding to 2nd order (about slow pressure) and solving quadratically
+      double Cp0 = 18567.9235606, T0 = 3150.95, nu = 0.183215136;
+      double k0 = Rd/Cp0;
+      double alpha = k0*nu*pow(Rhok_d[id*nv+lev]*T0,nu);
+      double pslow = pressurek_d[id*nv+lev];
+      double a, b, c;
+
+      a = 0.5*( nu*(nu-1)/Rd/Rd*pow(pslow/Rd,nu-2) - \
+          alpha/pslow/pslow );
+      b = nu*(2-nu)/Rd*pow(pslow/Rd,nu-1);
+      c = pow(pslow/Rd,nu)*(1 - nu + 0.5*nu*(nu-1)) +\
+          alpha*log(P_Ref/pslow) + 0.5*alpha - aux;
+
+      p1 = (-b + sqrt(b*b-4*a*c))/(2*a);
+      p2 = (-b - sqrt(b*b-4*a*c))/(2*a);
+      // get the root closest to the slow pressure. that should be about right...
+      // cross fingers
+      if (fabs(p1-pslow) < fabs(p2-pslow)) {
+        p = p1;
+      } else {
+        p = p2;
+      }
+    } else {
+      p = P_Ref*pow(Rd*aux / P_Ref, CpT_d[id*nv+lev] / Cv);
+    }
+
     pressure_d[id * nv + lev] = p - pressurek_d[id * nv + lev] + diffpr_d[id * nv + lev] * dt;
 
     if(isnan(pressure_d[id*nv+lev])){
@@ -510,7 +538,8 @@ __global__ void Density_Pressure_Eqs_Poles(double *pressure_d  ,
                                            int    *point_local_d,
                                            int     num          ,
                                            int     nv           ,
-                                           bool    DeepModel    ){
+                                           bool    DeepModel    ,
+                                           bool    CpTemp       ){
 
     int id = blockIdx.x * blockDim.x + threadIdx.x;
     id += num - 2;     // Poles
@@ -614,7 +643,33 @@ __global__ void Density_Pressure_Eqs_Poles(double *pressure_d  ,
             aux += pt_d[id*nv + lev]*r;
 
             // Updates pressure
-            p = P_Ref*pow(Rd*aux / P_Ref, CpT_d[id*nv+lev] / Cv);
+            if (CpTemp) {
+              // need to solve a transcendental eqn for p!
+              // let's try expanding to 2nd order (about slow pressure) and solving quadratically
+              double Cp0 = 18567.9235606, T0 = 3150.95, nu = 0.183215136;
+              double k0 = Rd/Cp0;
+              double alpha = k0*nu*pow(Rhok_d[id*nv+lev]*T0,nu);
+              double pslow = pressurek_d[id*nv+lev];
+              double a, b, c;
+
+              a = 0.5*( nu*(nu-1)/Rd/Rd*pow(pslow/Rd,nu-2) - \
+                  alpha/pslow/pslow );
+              b = nu*(2-nu)/Rd*pow(pslow/Rd,nu-1);
+              c = pow(pslow/Rd,nu)*(1 - nu - 0.5*nu*(nu-1)) +\
+                  alpha*log(P_Ref/pslow) + 0.5*alpha - aux;
+
+              p1 = (-b + sqrt(b*b-4*a*c))/(2*a);
+              p2 = (-b - sqrt(b*b-4*a*c))/(2*a);
+              // get the root closest to the slow pressure. that should be about right...
+              // cross fingers
+              if (fabs(p1-pslow) < fabs(p2-pslow)) {
+                p = p1;
+              } else {
+                p = p2;
+              }
+            } else {
+              p = P_Ref*pow(Rd*aux / P_Ref, CpT_d[id*nv+lev] / Cv);
+            }
             pressure_d[id*nv + lev] = p - pressurek_d[id*nv + lev] + diffpr_d[id*nv + lev] * dt;
 
             // Updates density
