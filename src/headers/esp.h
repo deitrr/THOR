@@ -322,6 +322,7 @@ public:
               double,
               double,
               bool  ,
+              bool  ,
               bool  );
 
     void ProfX(int   ,

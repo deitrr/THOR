@@ -64,7 +64,8 @@ __global__ void Compute_temperature (double *temperature_d,
                                      double  P_Ref        ,
                                      double  Rd           ,
                                      double *CpT_d        ,
-                                     int     num          ){
+                                     int     num          ,
+                                     bool    CpTemp       ){
 
     int id = blockIdx.x * blockDim.x + threadIdx.x;
     int nv = gridDim.y;
@@ -75,8 +76,15 @@ __global__ void Compute_temperature (double *temperature_d,
       double Cv = CpT_d[id*nv+lev] - Rd;
       double CvoCp = Cv / CpT_d[id*nv+lev];
 
+      double Cp0 = 18567.9235606, T0 = 3150.95, nu = 0.183215136;
+      double k0 = Rd/Cp0;
+
       temperature_d[id*nv + lev] = pressure_d[id*nv + lev]/(Rd*Rho_d[id*nv + lev]);
-      pt_d[id * nv + lev] = (P_Ref / (Rd * Rho_d[id*nv + lev]))*pow(pressure_d[id*nv + lev] / P_Ref, CvoCp);
+      if (CpTemp)  {
+        pt_d[id * nv + lev] = pow( pow(temperature_d[id*nv+lev],nu) + k0*nu*pow(T0,nu)*log(P_Ref/(pressure_d[id*nv+lev])), 1.0/nu);
+      } else {
+        pt_d[id * nv + lev] = (P_Ref / (Rd * Rho_d[id*nv + lev]))*pow(pressure_d[id*nv + lev] / P_Ref, CvoCp);
+      }
     }
 }
 

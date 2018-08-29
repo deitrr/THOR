@@ -70,7 +70,8 @@ __host__ void ESP::Thor(double timestep_dyn, // Large timestep.
                         double Gravit      , // Gravity.
                         double A           , // Planet radius.
                         bool NonHydro      , // Turn on/off non-hydrostatic.
-                        bool DeepModel     ){// Turn on/off deep atmosphere.
+                        bool DeepModel     , // Turn on/off deep atmosphere.
+                        bool CpTemp        ){ // Toggle variable heat capacity
 //
 //  Number of threads per block.
     const int NTH = 256;
@@ -206,7 +207,8 @@ __host__ void ESP::Thor(double timestep_dyn, // Large timestep.
                                                                           Altitude_d   ,
                                                                           Altitudeh_d  ,
                                                                           point_num    ,
-                                                                          nv           );
+                                                                          nv           ,
+                                                                          CpTemp       );
 
         check_h = false;
         cudaMemcpy(check_d, &check_h, sizeof(bool), cudaMemcpyHostToDevice);

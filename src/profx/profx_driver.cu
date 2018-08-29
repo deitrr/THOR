@@ -130,7 +130,8 @@ __host__ void ESP::ProfX(int    planetnumber, // Planet ID
                                          P_Ref        ,
                                          Rd           ,
                                          CpT_d        ,
-                                         point_num    );
+                                         point_num    ,
+                                         CpTemp);
 
     BENCH_POINT_I(current_step, "phy_T", vector<string>({}), vector<string>({"Rho_d", "pressure_d", "Mh_d", "Wh_d", "temperature_d", "W_d"}))
 //  Check for nan.

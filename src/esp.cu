@@ -690,7 +690,8 @@ int main (int argc,  char** argv){
                 Planet.Gravit, // Gravity [m/s^2]
                 Planet.A     , // Planet radius [m]
                 NonHydro     , // Non-hydrostatic option
-                DeepModel    );// Deep model option
+                DeepModel    , // Deep model option
+                CpTemp       );
           }
 //
 //     Physical Core Integration (ProfX)
