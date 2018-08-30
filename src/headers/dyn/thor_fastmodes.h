@@ -474,28 +474,18 @@ __global__ void Density_Pressure_Eqs(double *pressure_d ,
     // Updates pressure
     if (CpTemp) {
       // need to solve a transcendental eqn for p!
-      // let's try expanding to 2nd order (about slow pressure) and solving quadratically
+      // numerical method based on problem 13.6.3 in Heng book
       double Cp0 = 18567.9235606, T0 = 3150.95, nu = 0.183215136;
       double k0 = Rd/Cp0;
-      double alpha = k0*nu*pow(Rhok_d[id*nv+lev]*T0,nu);
-      double pslow = pressurek_d[id*nv+lev];
-      double a, b, c;
 
-      a = 0.5*( nu*(nu-1)/Rd/Rd*pow(pslow/Rd,nu-2) - \
-          alpha/pslow/pslow );
-      b = nu*(2-nu)/Rd*pow(pslow/Rd,nu-1);
-      c = pow(pslow/Rd,nu)*(1 - nu + 0.5*nu*(nu-1)) +\
-          alpha*log(P_Ref/pslow) + 0.5*alpha - aux;
+      double p1 = aux*Rd, pnew;
+      pnew = Rd*pow( pow(aux,nu) - k0*nu*pow(r*T0,nu)*log(P_Ref/p1), 1.0/nu );
 
-      p1 = (-b + sqrt(b*b-4*a*c))/(2*a);
-      p2 = (-b - sqrt(b*b-4*a*c))/(2*a);
-      // get the root closest to the slow pressure. that should be about right...
-      // cross fingers
-      if (fabs(p1-pslow) < fabs(p2-pslow)) {
-        p = p1;
-      } else {
-        p = p2;
+      while (fabs(pnew-p1)>1e-6) {
+        p1 = pnew;
+        pnew = Rd*pow( pow(aux,nu) - k0*nu*pow(r*T0,nu)*log(P_Ref/p1), 1.0/nu );
       }
+      p = pnew;
     } else {
       p = P_Ref*pow(Rd*aux / P_Ref, CpT_d[id*nv+lev] / Cv);
     }
@@ -645,28 +635,18 @@ __global__ void Density_Pressure_Eqs_Poles(double *pressure_d  ,
             // Updates pressure
             if (CpTemp) {
               // need to solve a transcendental eqn for p!
-              // let's try expanding to 2nd order (about slow pressure) and solving quadratically
+              // numerical method based on problem 13.6.3 in Heng book
               double Cp0 = 18567.9235606, T0 = 3150.95, nu = 0.183215136;
               double k0 = Rd/Cp0;
-              double alpha = k0*nu*pow(Rhok_d[id*nv+lev]*T0,nu);
-              double pslow = pressurek_d[id*nv+lev];
-              double a, b, c;
 
-              a = 0.5*( nu*(nu-1)/Rd/Rd*pow(pslow/Rd,nu-2) - \
-                  alpha/pslow/pslow );
-              b = nu*(2-nu)/Rd*pow(pslow/Rd,nu-1);
-              c = pow(pslow/Rd,nu)*(1 - nu - 0.5*nu*(nu-1)) +\
-                  alpha*log(P_Ref/pslow) + 0.5*alpha - aux;
+              double p1 = aux*Rd, pnew;
+              pnew = Rd*pow( pow(aux,nu) - k0*nu*pow(r*T0,nu)*log(P_Ref/p1), 1.0/nu );
 
-              p1 = (-b + sqrt(b*b-4*a*c))/(2*a);
-              p2 = (-b - sqrt(b*b-4*a*c))/(2*a);
-              // get the root closest to the slow pressure. that should be about right...
-              // cross fingers
-              if (fabs(p1-pslow) < fabs(p2-pslow)) {
-                p = p1;
-              } else {
-                p = p2;
+              while (fabs(pnew-p1)>1e-6) {
+                p1 = pnew;
+                pnew = Rd*pow( pow(aux,nu) - k0*nu*pow(r*T0,nu)*log(P_Ref/p1), 1.0/nu );
               }
+              p = pnew;
             } else {
               p = P_Ref*pow(Rd*aux / P_Ref, CpT_d[id*nv+lev] / Cv);
             }

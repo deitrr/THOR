@@ -815,7 +815,8 @@ __host__ void ESP::Thor(double timestep_dyn, // Large timestep.
                                                         times      ,
                                                         maps_d     ,
                                                         nl_region  ,
-                                                        DeepModel  );
+                                                        DeepModel  ,
+                                                        CpTemp     );
            check_h = false;
            cudaMemcpy(check_d, &check_h, sizeof(bool), cudaMemcpyHostToDevice);
            isnan_check_thor<<< 16, NTH >>>(pressures_d, nv, point_num, check_d);
@@ -850,7 +851,8 @@ __host__ void ESP::Thor(double timestep_dyn, // Large timestep.
                                                      point_local_d,
                                                      point_num    ,
                                                      nv           ,
-                                                     DeepModel    );
+                                                     DeepModel    ,
+                                                     CpTemp       );
              check_h = false;
              cudaMemcpy(check_d, &check_h, sizeof(bool), cudaMemcpyHostToDevice);
              isnan_check_thor<<< 16, NTH >>>(pressures_d, nv, point_num, check_d);
