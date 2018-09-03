@@ -54,7 +54,7 @@
 
 
 
-__host__ void ESP::CopyToHost(){
+__host__ void ESP::CopyToHost(bool conservation){
 
 //
 //  Description: Transfer diagnostics from the device to the host.
@@ -64,16 +64,18 @@ __host__ void ESP::CopyToHost(){
         cudaMemcpy(pressure_h , pressure_d , point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
         cudaMemcpy(Mh_h       , Mh_d       , 3 * point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
         cudaMemcpy(mixH_h     , mixH_d     , point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
-        cudaMemcpy(Etotal_h   , Etotal_d   , point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
-        cudaMemcpy(Mass_h     , Mass_d     , point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
-        cudaMemcpy(AngMomx_h  , AngMomx_d   , point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
-        cudaMemcpy(AngMomy_h  , AngMomy_d   , point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
-        cudaMemcpy(AngMomz_h  , AngMomz_d   , point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
-        cudaMemcpy(&GlobalE_h   , GlobalE_d    , sizeof(double), cudaMemcpyDeviceToHost);
-        cudaMemcpy(&GlobalMass_h, GlobalMass_d , sizeof(double), cudaMemcpyDeviceToHost);
-        cudaMemcpy(&GlobalAMx_h , GlobalAMx_d  , sizeof(double), cudaMemcpyDeviceToHost);
-        cudaMemcpy(&GlobalAMy_h , GlobalAMy_d  , sizeof(double), cudaMemcpyDeviceToHost);
-        cudaMemcpy(&GlobalAMz_h , GlobalAMz_d  , sizeof(double), cudaMemcpyDeviceToHost);
+        if (conservation == true) {
+          cudaMemcpy(Etotal_h   , Etotal_d   , point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
+          cudaMemcpy(Mass_h     , Mass_d     , point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
+          cudaMemcpy(AngMomx_h  , AngMomx_d   , point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
+          cudaMemcpy(AngMomy_h  , AngMomy_d   , point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
+          cudaMemcpy(AngMomz_h  , AngMomz_d   , point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
+          cudaMemcpy(&GlobalE_h   , GlobalE_d    , sizeof(double), cudaMemcpyDeviceToHost);
+          cudaMemcpy(&GlobalMass_h, GlobalMass_d , sizeof(double), cudaMemcpyDeviceToHost);
+          cudaMemcpy(&GlobalAMx_h , GlobalAMx_d  , sizeof(double), cudaMemcpyDeviceToHost);
+          cudaMemcpy(&GlobalAMy_h , GlobalAMy_d  , sizeof(double), cudaMemcpyDeviceToHost);
+          cudaMemcpy(&GlobalAMz_h , GlobalAMz_d  , sizeof(double), cudaMemcpyDeviceToHost);
+        }
 }
 
 __host__ void ESP::Output(int    ntstep         , // Number of integration steps
@@ -88,7 +90,8 @@ __host__ void ESP::Output(int    ntstep         , // Number of integration steps
                           double A              , // Planet radius [m]
                           char  *simulation_ID  , // Planet ID
                           double simulation_time, // Option for deep atmosphere
-                          const std::string & output_dir){
+                          const std::string & output_dir,
+                          bool conservation     ){
 
 //
 //  Description: Model output.
@@ -381,6 +384,7 @@ __host__ void ESP::Output(int    ntstep         , // Number of integration steps
     H5Awrite(att, stringType, "kg m/s");
 
 
+    if (conservation == true)  {
 //  Etotal at each point
     dims[0] = nv*point_num;
     dataspace_id = H5Screate_simple(1, dims, NULL);
@@ -550,6 +554,7 @@ __host__ void ESP::Output(int    ntstep         , // Number of integration steps
     H5Dclose(dataset_id);
     H5Aclose(att);
     H5Sclose(dataspace_id);
+    }
 
 //  Close the file.
     H5Fflush(file_id, H5F_SCOPE_LOCAL);
