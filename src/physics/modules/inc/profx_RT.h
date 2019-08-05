@@ -483,15 +483,17 @@ __global__ void rtm_dual_band(double *pressure_d,
         }
 
         // zenith angle
-        coszrs = calc_zenith(lonlat_d, //latitude/longitude grid
-                             alpha,    //current RA of star (relative to zero long on planet)
-                             alpha_i,
-                             sin_decl, //declination of star
-                             cos_decl,
-                             sync_rot,
-                             ecc,
-                             obliquity,
-                             id);
+        // coszrs = calc_zenith(lonlat_d, //latitude/longitude grid
+        //                      alpha,    //current RA of star (relative to zero long on planet)
+        //                      alpha_i,
+        //                      sin_decl, //declination of star
+        //                      cos_decl,
+        //                      sync_rot,
+        //                      ecc,
+        //                      obliquity,
+        //                      id);
+
+        coszrs = 0.25*(1+1.4*0.25*(1-3*pow(sin(lonlat[id * 2 + 1])))
 
         // Compute opacities
         double taulw_lat;
