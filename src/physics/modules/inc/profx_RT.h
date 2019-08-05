@@ -493,7 +493,7 @@ __global__ void rtm_dual_band(double *pressure_d,
         //                      obliquity,
         //                      id);
 
-        coszrs = 0.25*(1+1.4*0.25*(1-3*pow(sin(lonlat[id * 2 + 1])))
+        coszrs = 0.25 * (1 + 1.4 * 0.25 * (1 - 3 * pow(sin(lonlat_d[id * 2 + 1]), 2)));
 
         // Compute opacities
         double taulw_lat;
