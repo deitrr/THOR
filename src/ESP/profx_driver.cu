@@ -54,6 +54,7 @@
 #include "phy/profx_held_suarez.h"
 #include "phy/profx_shallowHJ.h"
 // #include "phy/profx_sponge.h"
+#include "phy/kelt9b.h"
 #include "phy/profx_tidalearth.h"
 
 #include "binary_test.h"
@@ -334,6 +335,23 @@ __host__ void ESP::ProfX(const SimulationSetup& sim,
                       ("Rho_d", "pressure_d", "Mh_d", "Wh_d", "temperature_d", "W_d"))
     //  Computes the new pressures.
     cudaDeviceSynchronize();
+
+    // hack for testing extra cooling on Kelt 9b
+    cudaDeviceSynchronize();
+    kelt9b<<<NB, NTH>>>(Mh_d,
+                        pressure_d,
+                        Rho_d,
+                        temperature_d,
+                        profx_dP_d,
+                        sim.Gravit,
+                        sim.Cp,
+                        sim.Rd,
+                        Altitude_d,
+                        Altitudeh_d,
+                        lonlat_d,
+                        timestep,
+                        point_num);
+
     Compute_pressure<<<NB, NTH>>>(pressure_d, temperature_d, Rho_d, sim.Rd, point_num);
 
     //always do this nan check so the code doesn't keep computing garbage
