@@ -92,6 +92,10 @@ bool radiative_transfer::initialise_memory(const ESP &              esp,
     cudaMalloc((void **)&flw_dn_d, esp.nvi * esp.point_num * sizeof(double));
     cudaMalloc((void **)&tau_d, esp.nv * esp.point_num * 2 * sizeof(double));
 
+    cudaMalloc((void **)&tautot_lw_d, esp.nv * esp.point_num * sizeof(double));
+    cudaMalloc((void **)&frad_lw_up_d, esp.nvi * esp.point_num * sizeof(double));
+    cudaMalloc((void **)&frad_lw_dn_d, esp.nvi * esp.point_num * sizeof(double));
+
     cudaMalloc((void **)&fsw_up_d, esp.nvi * esp.point_num * sizeof(double));
     cudaMalloc((void **)&fsw_dn_d, esp.nvi * esp.point_num * sizeof(double));
 
@@ -126,6 +130,9 @@ bool radiative_transfer::free_memory() {
     cudaFree(fsw_up_d);
     cudaFree(fsw_dn_d);
     cudaFree(tau_d);
+    cudaFree(tautot_lw_d);
+    cudaFree(frad_lw_up_d);
+    cudaFree(frad_lw_dn_d);
 
     cudaFree(phtemp);
     cudaFree(thtemp);
@@ -225,6 +232,9 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
                                  fsw_up_d,
                                  fsw_dn_d,
                                  tau_d,
+                                 tautot_lw_d,
+                                 frad_lw_up_d,
+                                 frad_lw_dn_d,
                                  sim.Gravit,
                                  sim.Cp,
                                  esp.lonlat_d,

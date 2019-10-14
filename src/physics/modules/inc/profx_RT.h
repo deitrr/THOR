@@ -241,14 +241,18 @@ __device__ double source_func_lin(double bb, double bl, double bt, double tau, d
     return e;
 }
 
-__device__ void radclw(double *phtemp,
+__device__ void radclw(double *pressure_d,
                        double *ttemp,
                        double *thtemp,
                        double *dtemp,
                        double *tau_d,
+                       double *tautot_lw_d,
                        double *flw_up_d,
                        double *flw_dn_d,
+                       double *frad_lw_up_d,
+                       double *frad_lw_dn_d,
                        double *Altitudeh_d,
+                       double  Rd,
                        double  diff_ang,
                        double  tlow,
                        double  Cv,
@@ -268,7 +272,10 @@ __device__ void radclw(double *phtemp,
     //  Calculate upward, downward, and net flux.
     //  Downward Directed Radiation
     //
-    flw_dn_d[id * (nv + 1) + nv] = 0.0; // Upper boundary
+    frad_lw_dn_d[id * (nv + 1) + nv] = 0.0; // Upper boundary
+    flw_dn_d[id * (nv + 1) + nv]     = 0.0; // Upper boundary
+    double Efl                       = 0;
+    double Fdiff                     = 0;
     for (int lev = nv - 1; lev >= 0; lev--) {
         double ed = 0.0;
         if (tau_d[id * nv * 2 + 2 * lev + 1] < 0.0)
@@ -284,10 +291,29 @@ __device__ void radclw(double *phtemp,
 
         ed = source_func_lin(bb, bl, bt, tau_d[id * nv * 2 + 2 * lev + 1], diff_ang);
 
-        flw_dn_d[id * (nv + 1) + lev] =
+        frad_lw_dn_d[id * (nv + 1) + lev] =
             ed
-            + flw_dn_d[id * (nv + 1) + lev + 1]
+            + frad_lw_dn_d[id * (nv + 1) + lev + 1]
                   * exp(-(1. / diff_ang) * tau_d[id * nv * 2 + 2 * lev + 1]);
+
+        // Efl = frad_lw_dn_d[id * (nv + 1) + lev + 1]
+        //       * exp(-(1. / diff_ang) * tau_d[id * nv * 2 + 2 * lev + 1]) / ed;
+        // if (Efl < 0.01 && lev != nv - 1) {
+        //     Fdiff = -16 * bc * tl * tl * tl * pressure_d[id * nv + lev]
+        //             / (3 * tautot_lw_d[id * nv + lev] * gravit * Rho_d[id * nv + lev]) * (tt - tb)
+        //             / (Altitudeh_d[lev + 1] - Altitudeh_d[lev]);
+        //     if (Fdiff >= 0) {
+        //         flw_dn_d[id * (nv + 1) + lev] = frad_lw_dn_d[id * (nv + 1) + lev] * pow(Efl, 0.023);
+        //     }
+        //     else {
+        //         flw_dn_d[id * (nv + 1) + lev] = frad_lw_dn_d[id * (nv + 1) + lev] * pow(Efl, 0.023)
+        //                                         + (1.0 - pow(Efl, 0.023)) * Fdiff;
+        //     }
+        //     // flw_dn_d[id * (nv + 1) + lev] = frad_lw_dn_d[id * (nv + 1) + lev]; //hack
+        // }
+        // else {
+        flw_dn_d[id * (nv + 1) + lev] = frad_lw_dn_d[id * (nv + 1) + lev];
+        // }
     }
     //
     //  Upward Directed Radiation
@@ -295,11 +321,13 @@ __device__ void radclw(double *phtemp,
     if (surface == true) {
         tlow = Tsurface;
     }
-    flw_up_d[id * (nv + 1) + 0] = bc * tlow * tlow * tlow * tlow; // Lower boundary;
+    flw_up_d[id * (nv + 1) + 0]     = bc * tlow * tlow * tlow * tlow; // Lower boundary;
+    frad_lw_up_d[id * (nv + 1) + 0] = bc * tlow * tlow * tlow * tlow; // Lower boundary;
     if (surface == false) {
-        if (flw_up_d[id * (nv + 1) + 0] < flw_dn_d[id * (nv + 1) + 0])
-            // reflecting boundary
-            flw_up_d[id * (nv + 1) + 0] = flw_dn_d[id * (nv + 1) + 0];
+        // if (flw_up_d[id * (nv + 1) + 0] < flw_dn_d[id * (nv + 1) + 0])
+        // reflecting boundary
+        flw_up_d[id * (nv + 1) + 0] += frad_lw_dn_d[id * (nv + 1) + 0];
+        frad_lw_up_d[id * (nv + 1) + 0] += frad_lw_dn_d[id * (nv + 1) + 0];
     }
     for (int lev = 1; lev <= nv; lev++) {
 
@@ -318,10 +346,24 @@ __device__ void radclw(double *phtemp,
 
         eu = source_func_lin(bt, bl, bb, tau_d[id * nv * 2 + 2 * (lev - 1) + 1], diff_ang);
 
-        flw_up_d[id * (nv + 1) + lev] =
+        frad_lw_up_d[id * (nv + 1) + lev] =
             eu
-            + flw_up_d[id * (nv + 1) + lev - 1]
+            + frad_lw_up_d[id * (nv + 1) + lev - 1]
                   * exp(-(1. / diff_ang) * tau_d[id * nv * 2 + 2 * (lev - 1) + 1]);
+
+        Efl = frad_lw_up_d[id * (nv + 1) + lev - 1]
+              * exp(-(1. / diff_ang) * tau_d[id * nv * 2 + 2 * (lev - 1) + 1]) / eu;
+        Efl = 1; //hack to shut off diff limit
+        if (Efl < 0.01) {
+            Fdiff = 16 * bc * tb * tb * tb / 3 * (ttemp[id * nv + lev] - ttemp[id * nv + lev - 1])
+                    / (tautot_lw_d[id * nv + lev] - tautot_lw_d[id * nv + lev - 1]);
+            flw_up_d[id * (nv + 1) + lev] = frad_lw_up_d[id * (nv + 1) + lev] * pow(Efl, 0.023)
+                                            + (1.0 - pow(Efl, 0.023)) * Fdiff;
+            flw_dn_d[id * (nv + 1) + lev] = frad_lw_dn_d[id * (nv + 1) + lev] * pow(Efl, 0.023);
+        }
+        else {
+            flw_up_d[id * (nv + 1) + lev] = frad_lw_up_d[id * (nv + 1) + lev];
+        }
     }
 
     for (int lev = 0; lev < nv; lev++) {
@@ -342,7 +384,9 @@ __device__ void radclw(double *phtemp,
 
 
 __device__ void computetau(double *tau_d,
+                           double *tautot_lw_d,
                            double *phtemp,
+                           double *pressure_d,
                            double  cosz,
                            double  tausw,
                            double  taulw,
@@ -363,6 +407,9 @@ __device__ void computetau(double *tau_d,
             + (taulw * (1 - f_lw) / pow(ps0, n_lw))
                   * (pow(phtemp[id * (nv + 1) + lev], n_lw)
                      - pow(phtemp[id * (nv + 1) + lev + 1], n_lw));
+        tautot_lw_d[id * nv + lev] =
+            (taulw * f_lw / ps0) * (pressure_d[id * nv + lev])
+            + (taulw * (1 - f_lw) / pow(ps0, n_lw)) * pow(pressure_d[id * nv + lev], n_lw);
     }
 }
 
@@ -374,6 +421,9 @@ __global__ void rtm_dual_band(double *pressure_d,
                               double *fsw_up_d,
                               double *fsw_dn_d,
                               double *tau_d,
+                              double *tautot_lw_d,
+                              double *frad_lw_up_d,
+                              double *frad_lw_dn_d,
                               double  gravit,
                               double  Cp,
                               double *lonlat_d,
@@ -509,7 +559,19 @@ __global__ void rtm_dual_band(double *pressure_d,
         else {
             taulw_lat = taulw;
         }
-        computetau(tau_d, phtemp, coszrs, tausw, taulw_lat, n_sw, n_lw, f_lw, ps0, id, nv);
+        computetau(tau_d,
+                   tautot_lw_d,
+                   phtemp,
+                   pressure_d,
+                   coszrs,
+                   tausw,
+                   taulw_lat,
+                   n_sw,
+                   n_lw,
+                   f_lw,
+                   ps0,
+                   id,
+                   nv);
 
         for (int lev = 0; lev <= nv; lev++) {
             fsw_up_d[id * nvi + lev] = 0.0;
@@ -552,14 +614,18 @@ __global__ void rtm_dual_band(double *pressure_d,
             flw_dn_d[id * nvi + lev] = 0.0;
         }
 
-        radclw(phtemp,
+        radclw(pressure_d,
                ttemp,
                thtemp,
                dtemp,
                tau_d,
+               tautot_lw_d,
                flw_up_d,
                flw_dn_d,
+               frad_lw_up_d,
+               frad_lw_dn_d,
                Altitudeh_d,
+               Rd,
                diff_ang,
                tlow,
                Cp - Rd,

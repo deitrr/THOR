@@ -99,7 +99,6 @@ __global__ void deepHJ(double *Mh_d,
             Ptil = log10(100.0 / 100000);
         }
 
-
         if (pre <= 1e6) { //pressure less than ten bars
             // Tnight =
             //     1388.2145 + 267.66586 * Ptil - 215.53357 * Ptil * Ptil

@@ -129,6 +129,9 @@ private:
     double *flw_up_d;
     double *flw_dn_d;
     double *tau_d;
+    double *tautot_lw_d;
+    double *frad_lw_up_d;
+    double *frad_lw_dn_d;
 
     double *tau_h;
     double *fsw_up_h;
