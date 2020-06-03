@@ -117,6 +117,7 @@ void crash_report(const output_def &def, std::string output_dir, const std::stri
                 first = 0;
             }
         }
+        delete[] ptr_h;
     }
     else {
         for (int i = 0; i < def.size; i++) {
