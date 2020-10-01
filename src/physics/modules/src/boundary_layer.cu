@@ -955,6 +955,8 @@ __global__ void Heat_Diff_Impl(double *      pt_d,
         double Cv    = Cp - Rd;
         double kappa = Rd / Cp;
         double rup, rlow;
+        //hack to disconnect surface
+        KH_d[id * (nv + 1) + 0] = 0.0;
         for (lev = -1; lev < bl_top_lev_d[id] + 1; lev++) {
             //forward sweep
             if (DeepModel) {
