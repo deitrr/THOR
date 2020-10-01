@@ -1288,14 +1288,15 @@ __global__ void Calc_MOlength_Cdrag_BLdepth(double *pressure_d,
         }
 
         //surface drag coefficient
-        if (RiB_d[id] < 0) { //unstable (temporarily model as neutral)
-            CD_d[id] = pow(KVONKARMAN, 2)
-                       * pow(int_phi_M_unstable(zeta_surf, Altitude_d[0] / z_rough), -2);
-            CH_d[id] = pow(KVONKARMAN, 2)
-                       * pow(int_phi_M_unstable(zeta_surf, Altitude_d[0] / z_rough), -1)
-                       * pow(int_phi_H_unstable(zeta_surf, Altitude_d[0] / z_therm), -1);
-        }
-        else if (RiB_d[id] == 0) { //neutral
+        // if (RiB_d[id] < 0) { //unstable (temporarily model as neutral)
+        //     CD_d[id] = pow(KVONKARMAN, 2)
+        //                * pow(int_phi_M_unstable(zeta_surf, Altitude_d[0] / z_rough), -2);
+        //     CH_d[id] = pow(KVONKARMAN, 2)
+        //                * pow(int_phi_M_unstable(zeta_surf, Altitude_d[0] / z_rough), -1)
+        //                * pow(int_phi_H_unstable(zeta_surf, Altitude_d[0] / z_therm), -1);
+        // }
+        // else if (RiB_d[id] == 0) { //neutral
+        if (RiB_d[id] <= 0) { //treat unstable as neutral
             CD_d[id] = pow(KVONKARMAN, 2) * pow(log(Altitude_d[0] / z_rough), -2);
             CH_d[id] = pow(KVONKARMAN, 2) * pow(log(Altitude_d[0] / z_rough), -1)
                        * pow(log(Altitude_d[0] / z_therm), -1);
@@ -1673,13 +1674,14 @@ __global__ void CalcKM_KH(double *RiB_d,
                                  * pow(1.0 - Altitudeh_d[lev] / bl_top_height_d[id], 2);
             if (Altitudeh_d[lev] <= f_surf_layer * bl_top_height_d[id]) { //inner layer
                 //condition on surface layer stability as in Frierson
-                if (RiB_d[id] < 0) { //unstable
-                    KM_d[id * (nvi) + lev] = kvk_z_scale * sqrt(CD_d[id]) * vh_lowest_d[id]
-                                             / phi_M_unstable(Altitudeh_d[lev] / L_MO_d[id]);
-                    KH_d[id * (nvi) + lev] = kvk_z_scale * sqrt(CD_d[id]) * vh_lowest_d[id]
-                                             / phi_H_unstable(Altitudeh_d[lev] / L_MO_d[id]);
-                }
-                else if (RiB_d[id] == 0) { //neutral
+                // if (RiB_d[id] < 0) { //unstable
+                //     KM_d[id * (nvi) + lev] = kvk_z_scale * sqrt(CD_d[id]) * vh_lowest_d[id]
+                //                              / phi_M_unstable(Altitudeh_d[lev] / L_MO_d[id]);
+                //     KH_d[id * (nvi) + lev] = kvk_z_scale * sqrt(CD_d[id]) * vh_lowest_d[id]
+                //                              / phi_H_unstable(Altitudeh_d[lev] / L_MO_d[id]);
+                // }
+                // else if (RiB_d[id] == 0) { //neutral
+                if (RiB_d[id] <= 0) {
                     KM_d[id * (nvi) + lev] = kvk_z_scale * sqrt(CD_d[id]) * vh_lowest_d[id];
                     KH_d[id * (nvi) + lev] =
                         kvk_z_scale * sqrt(CD_d[id]) * vh_lowest_d[id]; //scales with CD, not CH
@@ -1700,30 +1702,31 @@ __global__ void CalcKM_KH(double *RiB_d,
                 }
             }
             else if (Altitudeh_d[lev] <= bl_top_height_d[id]) { //outer layer
-                if (RiB_d[id] < 0) {                            //unstable
-                    //trickiest part of the whole damn thing
-                    double wstar, wm, wt, Pr;
-                    //convective velocity scale above inner layer
-                    wstar =
-                        pow(Gravit / pt_surf_d[id] * F_sens_d[id] * bl_top_height_d[id], 1. / 3);
-                    //total velocity scale including surface friction velocity
-                    wm = pow(pow(sqrt(CD_d[id]) * vh_lowest_d[id], 3)
-                                 + GAMMA_H * f_surf_layer * KVONKARMAN * pow(wstar, 3),
-                             1. / 3);
-                    //Prandtl number at top of inner layer
-                    Pr = phi_H_unstable(f_surf_layer * bl_top_height_d[id] / L_MO_d[id])
-                             / phi_M_unstable(f_surf_layer * bl_top_height_d[id] / L_MO_d[id])
-                         + A_THERM * KVONKARMAN * f_surf_layer * wstar / wm;
-                    //velocity scale for heat mixing
-                    wt = wm / Pr;
-
-                    KM_d[id * nvi + lev] = kvk_z_scale * wm;
-                    KH_d[id * nvi + lev] = kvk_z_scale * wt;
-                    if (isnan(KH_d[id * nvi + lev]) || isnan(KM_d[id * nvi + lev])) {
-                        printf("%f %f %f %f", wstar, wm, Pr, wt);
-                    }
-                }
-                else if (RiB_d[id] == 0) { //neutral (same as inner layer)
+                // if (RiB_d[id] < 0) {                            //unstable
+                //     //trickiest part of the whole damn thing
+                //     double wstar, wm, wt, Pr;
+                //     //convective velocity scale above inner layer
+                //     wstar =
+                //         pow(Gravit / pt_surf_d[id] * F_sens_d[id] * bl_top_height_d[id], 1. / 3);
+                //     //total velocity scale including surface friction velocity
+                //     wm = pow(pow(sqrt(CD_d[id]) * vh_lowest_d[id], 3)
+                //                  + GAMMA_H * f_surf_layer * KVONKARMAN * pow(wstar, 3),
+                //              1. / 3);
+                //     //Prandtl number at top of inner layer
+                //     Pr = phi_H_unstable(f_surf_layer * bl_top_height_d[id] / L_MO_d[id])
+                //              / phi_M_unstable(f_surf_layer * bl_top_height_d[id] / L_MO_d[id])
+                //          + A_THERM * KVONKARMAN * f_surf_layer * wstar / wm;
+                //     //velocity scale for heat mixing
+                //     wt = wm / Pr;
+                //
+                //     KM_d[id * nvi + lev] = kvk_z_scale * wm;
+                //     KH_d[id * nvi + lev] = kvk_z_scale * wt;
+                //     if (isnan(KH_d[id * nvi + lev]) || isnan(KM_d[id * nvi + lev])) {
+                //         printf("%f %f %f %f", wstar, wm, Pr, wt);
+                //     }
+                // }
+                // else if (RiB_d[id] == 0) { //neutral (same as inner layer)
+                if (RiB_d[id] <= 0) {
                     KM_d[id * (nvi) + lev] = kvk_z_scale * sqrt(CD_d[id]) * vh_lowest_d[id];
                     KH_d[id * (nvi) + lev] =
                         kvk_z_scale * sqrt(CD_d[id]) * vh_lowest_d[id]; //scales with CD, not CH
