@@ -102,10 +102,10 @@ private:
     double *atmp, *btmp, *ctmp, *cpr_tmp, *dtmp, *dpr_tmp;
     double  zbl; // altitude of transition from BL to free atmosph (ekman scheme)
 
-    int *bl_top_lev_d; // index of highest level (center) inside BL
-    int *bl_top_lev_h; // index of highest level (center) inside BL
-    // int *   sl_top_lev_d;    // index of highest level (center) inside surface layer
-    // int *   sl_top_lev_h;    // index of highest level (center) inside surface layer
+    int *   bl_top_lev_d;    // index of highest level (center) inside BL
+    int *   bl_top_lev_h;    // index of highest level (center) inside BL
+    int *   sl_top_lev_d;    // index of highest level (center) inside surface layer
+    int *   sl_top_lev_h;    // index of highest level (center) inside surface layer
     double *bl_top_height_d; // height of bl
     double *bl_top_height_h; // height of bl
 
@@ -278,10 +278,10 @@ __global__ void CalcRiB(double *pressure_d,
                         double  f_surf_layer,
                         double *pt_surf_d,
                         double *p_surf_d,
-                        double *Rho_surf_d,
+                        // double *Rho_surf_d,
                         double *CD_d,
                         double *CH_d,
-                        double *zeta_d,
+                        // double *zeta_d,
                         double *vh_lowest_d,
                         double *Rho_int_d,
                         int     num,
@@ -384,3 +384,21 @@ __global__ void CalcKM_KH_old(double *RiB_d,
                               double *KM_d,
                               double *KH_d,
                               int     num);
+
+__global__ void CalcKM_KH_frierson(double *RiB_d,
+                                   // double *zeta_d,
+                                   double *CD_d,
+                                   double *CH_d,
+                                   double *bl_top_height_d,
+                                   int *   bl_top_lev_d,
+                                   int *   sl_top_lev_d,
+                                   double *vh_lowest_d,
+                                   double *Altitude_d,
+                                   double *Altitudeh_d,
+                                   double  Ri_crit,
+                                   double  z_rough,
+                                   double  z_therm,
+                                   double  f_surf_layer,
+                                   double *KM_d,
+                                   double *KH_d,
+                                   int     num);
