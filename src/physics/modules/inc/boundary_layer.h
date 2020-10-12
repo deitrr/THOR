@@ -284,6 +284,7 @@ __global__ void CalcRiB(double *pressure_d,
                         // double *zeta_d,
                         double *vh_lowest_d,
                         double *Rho_int_d,
+                        double *p_int_d,
                         int     num,
                         int     nv);
 

@@ -267,6 +267,7 @@ bool boundary_layer::phy_loop(ESP &                  esp,
                                 // zeta_d,
                                 vh_lowest_d,
                                 Rho_int_d,
+                                p_int_d,
                                 esp.point_num,
                                 esp.nv);
 
@@ -1178,6 +1179,27 @@ __global__ void Heat_Diff_Impl_EnergyEq(double *      pt_d,
         double Cv    = Cp - Rd;
         double kappa = Rd / Cp;
         double rup, rlow;
+        // if (id == 10) {
+        //     for (lev = 0; lev < bl_top_lev_d[id] + 1; lev++) {
+        //         printf("%d %.15f %.15f %.15f %.15f\n",
+        //                lev,
+        //                Altitude_d[lev],
+        //                pressure_d[id * nv + lev],
+        //                Rho_d[id * nv + lev],
+        //                pt_d[id * nv + lev]);
+        //     }
+        //     for (lev = 0; lev <= bl_top_lev_d[id] + 1; lev++) {
+        //         printf("%d %.15f %.15f %.15f %.15f %.15f %.15f\n",
+        //                lev,
+        //                Altitudeh_d[lev],
+        //                KH_d[id * (nv + 1) + lev],
+        //                Rho_int_d[id * (nv + 1) + lev],
+        //                pt_surf_d[id],
+        //                p_surf_d[id],
+        //                Tsurface_d[id]);
+        //     }
+        // }
+
         for (lev = -1; lev < bl_top_lev_d[id] + 1; lev++) {
             //forward sweep
             if (DeepModel) {
@@ -1325,6 +1347,30 @@ __global__ void Heat_Diff_Impl_EnergyEq(double *      pt_d,
         Tsurface_d[id] = pt_surf_d[id] * pow(p_surf_d[id] / P_Ref, kappa);
         // Rho_surf_d[id] = p_surf_d[id] / (Rd * Tsurface_d[id]);
         //Tsurface_d[id] -= Fsen / Csurf * time_step;
+
+        // if (id == 10) {
+        //     for (lev = 0; lev < bl_top_lev_d[id] + 1; lev++) {
+        //         printf("%d %.15f %.15f %.15f %.15f %.15f %.15f %.15f\n",
+        //                lev,
+        //                Altitude_d[lev],
+        //                pressure_d[id * nv + lev],
+        //                Rho_d[id * nv + lev],
+        //                pt_d[id * nv + lev],
+        //                pt_surf_d[id],
+        //                p_surf_d[id],
+        //                Tsurface_d[id]);
+        //     }
+        //     for (lev = 0; lev <= bl_top_lev_d[id] + 1; lev++) {
+        //         printf("%d %.15e %.15e %.15e %.15e %.15e %.15e\n",
+        //                lev,
+        //                atmp[id * nv + lev],
+        //                btmp[id * nv + lev],
+        //                ctmp[id * nv + lev],
+        //                dtmp[id * nv + lev],
+        //                cpr_tmp[id * nv + lev],
+        //                dpr_tmp[id * nv + lev]);
+        //     }
+        // }
     }
 }
 
@@ -1595,6 +1641,7 @@ __global__ void CalcRiB(double *pressure_d,
                         // double *zeta_d,
                         double *vh_lowest_d,
                         double *Rho_int_d,
+                        double *p_int_d,
                         int     num,
                         int     nv) {
 
@@ -1631,6 +1678,10 @@ __global__ void CalcRiB(double *pressure_d,
                 Rho_int_d[id * (nv + 1) + lev] =
                     Rho_d[id * nv + lev + 1]
                     + extrap_surf * (Rho_d[id * nv + lev] - Rho_d[id * nv + lev + 1]);
+
+                p_int_d[id * (nv + 1) + lev] =
+                    pressure_d[id * nv + lev + 1]
+                    + extrap_surf * (pressure_d[id * nv + lev] - pressure_d[id * nv + lev + 1]);
 
                 // Rho_int_d[id * (nv + 1) + lev] = Rho_surf_d[id];
                 // if (id == 2561) {
@@ -1708,6 +1759,12 @@ __global__ void CalcRiB(double *pressure_d,
                                                  + (Rho_d[id * nv + lev] - Rho_d[id * nv + lev - 1])
                                                        * (Altitudeh_d[lev] - Altitude_d[lev - 1])
                                                        / (Altitude_d[lev] - Altitude_d[lev - 1]);
+
+                p_int_d[id * (nv + 1) + lev] =
+                    pressure_d[id * nv + lev - 1]
+                    + (pressure_d[id * nv + lev] - pressure_d[id * nv + lev - 1])
+                          * (Altitudeh_d[lev] - Altitude_d[lev - 1])
+                          / (Altitude_d[lev] - Altitude_d[lev - 1]);
                 //vh for the layers and interface
                 vh_layer_below = vh_layer;
                 vh_layer       = sqrt((pow(Mh_d[id * nv * 3 + lev * 3 + 0], 2)

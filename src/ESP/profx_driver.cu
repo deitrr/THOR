@@ -210,6 +210,23 @@ __host__ void ESP::ProfX(const SimulationSetup& sim,
     Compute_temperature<<<NB, NTH>>>(
         temperature_d, pt_d, pressure_d, Rho_d, sim.P_Ref, Rd_d, Cp_d, point_num, calcT);
 
+    //------testing energy conservation---------------------------------
+    cudaMemcpy(Rho_h, Rho_d, point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(
+        temperature_h, temperature_d, point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(Tsurface_h, Tsurface_d, point_num * sizeof(double), cudaMemcpyDeviceToHost);
+    double    Eint;
+    int       idx = 10;
+    Eint          = Csurf * Tsurface_h[idx];
+    for (int lev = 0; lev < nv; lev++) {
+        Eint += (sim.Cp - sim.Rd) * Rho_h[idx * nv + lev] * temperature_h[idx * nv + lev]
+                * (pow(sim.A + Altitudeh_h[lev + 1], 3) - pow(sim.A + Altitudeh_h[lev], 3))
+                / (3 * pow(sim.A, 2));
+    }
+    printf("Start of profx, E = %.15e\n", Eint);
+
+    //------------------------------------------------------------------
+
     BENCH_POINT_I(
         current_step, "phy_T", (), ("Rho_d", "pressure_d", "Mh_d", "Wh_d", "temperature_d", "W_d"))
 
@@ -350,6 +367,23 @@ __host__ void ESP::ProfX(const SimulationSetup& sim,
                   "phy_core_benchmark",
                   (),
                   ("Rho_d", "pressure_d", "Mh_d", "Wh_d", "temperature_d", "W_d"))
+
+    //------testing energy conservation---------------------------------
+    cudaMemcpy(Rho_h, Rho_d, point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(
+        temperature_h, temperature_d, point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(Tsurface_h, Tsurface_d, point_num * sizeof(double), cudaMemcpyDeviceToHost);
+    // double Eint;
+    // int    idx = 10;
+    Eint = Csurf * Tsurface_h[idx];
+    for (int lev = 0; lev < nv; lev++) {
+        Eint += (sim.Cp - sim.Rd) * Rho_h[idx * nv + lev] * temperature_h[idx * nv + lev]
+                * (pow(sim.A + Altitudeh_h[lev + 1], 3) - pow(sim.A + Altitudeh_h[lev], 3))
+                / (3 * pow(sim.A, 2));
+    }
+    printf("Before phy mod, E = %.15e\n", Eint);
+
+    //------------------------------------------------------------------
 
     // here is where we call all "external" physics modules
     if (phy_modules_execute) {

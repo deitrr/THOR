@@ -83,6 +83,18 @@ public:
     double OLR_tot;
     double ASR_tot;
 
+    double *fsw_up_d;
+    double *fsw_dn_d;
+    double *flw_up_d;
+    double *flw_dn_d;
+    double *tau_d;
+
+    double *tau_h;
+    double *fsw_up_h;
+    double *fsw_dn_h;
+    double *flw_up_h;
+    double *flw_dn_h;
+
 private:
     // Scaling of Qheat, for slow ramp up or ramp down.
     double Qheat_scaling = 1.0;
@@ -133,17 +145,7 @@ private:
 
     double incflx;
     //  Arrays used in RT code
-    double *fsw_up_d;
-    double *fsw_dn_d;
-    double *flw_up_d;
-    double *flw_dn_d;
-    double *tau_d;
 
-    double *tau_h;
-    double *fsw_up_h;
-    double *fsw_dn_h;
-    double *flw_up_h;
-    double *flw_dn_h;
 
     double *insol_h;
     double *insol_d;

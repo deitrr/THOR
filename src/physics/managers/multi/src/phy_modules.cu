@@ -194,8 +194,50 @@ bool phy_modules_phy_loop(ESP&                   esp,
     if (chemistry_enabled)
         chem.phy_loop(esp, sim, diag, nstep, time_step);
 
+    //------testing energy conservation---------------------------------
+    cudaMemcpy(
+        esp.Rho_h, esp.Rho_d, esp.point_num * esp.nv * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(esp.temperature_h,
+               esp.temperature_d,
+               esp.point_num * esp.nv * sizeof(double),
+               cudaMemcpyDeviceToHost);
+    cudaMemcpy(
+        esp.Tsurface_h, esp.Tsurface_d, esp.point_num * sizeof(double), cudaMemcpyDeviceToHost);
+    double Eint;
+    int    idx = 10;
+    Eint       = esp.Csurf * esp.Tsurface_h[idx];
+    for (int lev = 0; lev < esp.nv; lev++) {
+        Eint += (sim.Cp - sim.Rd) * esp.Rho_h[idx * esp.nv + lev]
+                * esp.temperature_h[idx * esp.nv + lev]
+                * (pow(sim.A + esp.Altitudeh_h[lev + 1], 3) - pow(sim.A + esp.Altitudeh_h[lev], 3))
+                / (3 * pow(sim.A, 2));
+    }
+    printf("Before BL call, E = %.15e\n", Eint);
+    //------------------------------------------------------------------
+
     if (boundary_layer_enabled)
         bl.phy_loop(esp, sim, diag, nstep, time_step);
+
+    //------testing energy conservation---------------------------------
+    cudaMemcpy(
+        esp.Rho_h, esp.Rho_d, esp.point_num * esp.nv * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(esp.temperature_h,
+               esp.temperature_d,
+               esp.point_num * esp.nv * sizeof(double),
+               cudaMemcpyDeviceToHost);
+    cudaMemcpy(
+        esp.Tsurface_h, esp.Tsurface_d, esp.point_num * sizeof(double), cudaMemcpyDeviceToHost);
+    // double Eint;
+    // int    idx = 10;
+    Eint = esp.Csurf * esp.Tsurface_h[idx];
+    for (int lev = 0; lev < esp.nv; lev++) {
+        Eint += (sim.Cp - sim.Rd) * esp.Rho_h[idx * esp.nv + lev]
+                * esp.temperature_h[idx * esp.nv + lev]
+                * (pow(sim.A + esp.Altitudeh_h[lev + 1], 3) - pow(sim.A + esp.Altitudeh_h[lev], 3))
+                / (3 * pow(sim.A, 2));
+    }
+    printf("After  BL call, E = %.15e\n", Eint);
+    //------------------------------------------------------------------
 
     if (radiative_transfer_enabled) {
         rt.phy_loop(esp, sim, diag, nstep, time_step);
@@ -206,6 +248,33 @@ bool phy_modules_phy_loop(ESP&                   esp,
             printf("\n || ASR = %e W || OLR = %e W ||\n", rt.ASR_tot, rt.OLR_tot);
         }
     }
+
+    //------testing energy conservation---------------------------------
+    cudaMemcpy(
+        esp.Rho_h, esp.Rho_d, esp.point_num * esp.nv * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(esp.temperature_h,
+               esp.temperature_d,
+               esp.point_num * esp.nv * sizeof(double),
+               cudaMemcpyDeviceToHost);
+    cudaMemcpy(
+        esp.Tsurface_h, esp.Tsurface_d, esp.point_num * sizeof(double), cudaMemcpyDeviceToHost);
+    // double Eint;
+    // int    idx = 10;
+    Eint = esp.Csurf * esp.Tsurface_h[idx];
+    for (int lev = 0; lev < esp.nv; lev++) { //need to force update temperature, add fluxes at top
+        Eint += (sim.Cp - sim.Rd) * esp.Rho_h[idx * esp.nv + lev]
+                * esp.temperature_h[idx * esp.nv + lev]
+                * (pow(sim.A + esp.Altitudeh_h[lev + 1], 3) - pow(sim.A + esp.Altitudeh_h[lev], 3))
+                / (3 * pow(sim.A, 2));
+    }
+    cudaMemcpy(
+        rt.fsw_dn_h, rt.fsw_dn_d, esp.point_num * esp.nvi * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(
+        rt.flw_up_h, rt.flw_up_d, esp.point_num * esp.nvi * sizeof(double), cudaMemcpyDeviceToHost);
+    Eint +=
+        (-rt.fsw_dn_h[idx * esp.nvi + esp.nv] + rt.flw_up_h[idx * esp.nvi + esp.nv]) * time_step;
+    printf("After RT call, E = %.15e\n", Eint);
+    //------------------------------------------------------------------
 
 
 #ifdef HAS_ALFRODULL
