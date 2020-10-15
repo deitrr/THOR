@@ -2146,7 +2146,7 @@ __global__ void CalcKM_KH_frierson(double *RiB_d,
             //                          Ri_crit,
             //                          Altitude_d[lev] / z_rough,
             //                          Altitude_d[lev] / z_therm);
-            if (Altitude_d[lev] <= f_surf_layer * bl_top_height_d[id]) { //inner layer
+            if (Altitudeh_d[lev] <= f_surf_layer * bl_top_height_d[id]) { //inner layer
                 //condition on surface layer stability as in Frierson
                 if (RiB_d[id * (nvi) + 0] < 0) { //unstable
                     KM_d[id * (nvi) + lev] =
@@ -2168,7 +2168,7 @@ __global__ void CalcKM_KH_frierson(double *RiB_d,
                     KH_d[id * (nvi) + lev] = KM_d[id * nvi + lev]; //scales with CD, not CH
                 }
             }
-            else if (Altitude_d[lev] <= bl_top_height_d[id]) { //outer layer
+            else if (Altitudeh_d[lev] <= bl_top_height_d[id]) { //outer layer
                 double z_scale = Altitudeh_d[lev] / (f_surf_layer * bl_top_height_d[id])
                                  * pow(1
                                            - (Altitudeh_d[lev] - f_surf_layer * bl_top_height_d[id])
@@ -2207,6 +2207,12 @@ __global__ void CalcKM_KH_frierson(double *RiB_d,
                 KM_d[id * (nvi) + lev] = 0.0;
                 KH_d[id * (nvi) + lev] = 0.0;
             }
+
+            // if (lev == nvi - 1) {
+            //     if (KM_d[id * nvi + lev] != 0.0) {
+            //         printf("thingie");
+            //     }
+            // }
         }
 
         // hack

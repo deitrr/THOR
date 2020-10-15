@@ -2295,15 +2295,15 @@ def Get_Prange(input, grid, rg, args, xtype='lat', use_p=True):
 
 def RTbalance(input, grid, output):
     # not finished!
-    #rscale = (input.A+grid.Altitudeh[input.vlevel[0]])/input.A
-    rscale = 1
+    rscale = (input.A+grid.Altitudeh[input.vlevel[0]])/input.A
+    # rscale = 1
     asr = output.fsw_dn[:, input.vlevel[0], :] * grid.areasT[:, None]*rscale**2
     olr = output.flw_up[:, input.vlevel[0], :] * grid.areasT[:, None]*rscale**2
 
-    plt.plot(output.time, np.sum(asr,axis=0),'bs', linestyle='--',label='ASR')
-    #plt.plot(output.time, output.ASR_tot, 'bs', linestyle='--',label='ASR')
-    plt.plot(output.time, np.sum(olr,axis=0), 'rs', linestyle='--',label='OLR')
-    #plt.plot(output.time, output.OLR_tot, 'rs', linestyle='--',label='OLR')
+    #plt.plot(output.time, np.sum(asr,axis=0),'bs', linestyle='--',label='ASR')
+    plt.plot(output.time, output.ASR_tot, 'bs', linestyle='--',label='ASR')
+    #plt.plot(output.time, np.sum(olr,axis=0), 'rs', linestyle='--',label='OLR')
+    plt.plot(output.time, output.OLR_tot, 'rs', linestyle='--',label='OLR')
 
     plt.xlabel('Time (days)')
     plt.ylabel('Global integrated power (W)')
