@@ -186,6 +186,7 @@ __global__ void Compute_pressure_density_hydrostatic(double *pressure_d,
                                                      double *Tsurface_d,
                                                      double *Rd_d,
                                                      double *Altitude_d,
+                                                     double *Altitudeh_d,
                                                      double  P_Ref,
                                                      double  Gravit,
                                                      int     num,
@@ -193,12 +194,19 @@ __global__ void Compute_pressure_density_hydrostatic(double *pressure_d,
                                                      bool    surface) {
     int id = blockIdx.x * blockDim.x + threadIdx.x;
 
+    double col_mass = 0;
+
     // Computes absolute pressure and density for gcm_off mode (preserving hydrostasy, but not mass)
     if (id < num) {
-        //holds the bottom at P_Ref
+        for (int lev = 0; lev < nv; lev++) {
+            col_mass += Rho_d[id * nv + lev] * (Altitudeh_d[lev + 1] - Altitudeh_d[lev]);
+        }
+
+        //set bottom pressure by column mass
         if (surface) {
             pressure_d[id * nv + 0] =
-                P_Ref * (1.0 / (Altitude_d[0]) - Gravit / (Rd_d[id * nv + 0] * 2 * Tsurface_d[id]))
+                col_mass * Gravit
+                * (1.0 / (Altitude_d[0]) - Gravit / (Rd_d[id * nv + 0] * 2 * Tsurface_d[id]))
                 / (1.0 / (Altitude_d[0])
                    + Gravit / (Rd_d[id * nv + 0] * 2 * temperature_d[id * nv + 0]));
         }
