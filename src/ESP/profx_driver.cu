@@ -388,7 +388,7 @@ __host__ void ESP::ProfX(const SimulationSetup& sim,
         apply_heating<<<NB, NTH>>>(
             temperature_d, profx_Qheat_d, Rho_d, Cp_d, Rd_d, timestep, point_num);
         cudaDeviceSynchronize();
-        Compute_pressure_density_hydrostatic<<<NBRT, NTH>>>(pressure_d,
+        /*Compute_pressure_density_hydrostatic<<<NBRT, NTH>>>(pressure_d,
                                                             Rho_d,
                                                             temperature_d,
                                                             Tsurface_d,
@@ -398,7 +398,8 @@ __host__ void ESP::ProfX(const SimulationSetup& sim,
                                                             sim.Gravit,
                                                             point_num,
                                                             nv,
-                                                            surface);
+                                                            surface);*/
+        Compute_pressure<<<NB, NTH>>>(pressure_d, temperature_d, Rho_d, Rd_d, point_num);
     }
     else {
         Compute_pressure<<<NB, NTH>>>(pressure_d, temperature_d, Rho_d, Rd_d, point_num);
