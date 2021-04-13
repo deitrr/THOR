@@ -67,6 +67,8 @@
 #define damp_uv_to_mean_default true  // damps uv toward zonal mean (otherwise to zero)
 #define damp_w_to_mean_default true   // damps w toward zonal mean (otherwise to zero)
 
+#define LowPRaySponge_default false // use sponge layer at low pressures (rayleigh drag)
+
 #define DiffSponge_default false    // use diffusive sponge
 #define ns_diff_sponge_default 0.75 // Lowest level of sponge layer
 #define Dv_sponge_default 0.01      // Maximum diff damping (top of model)

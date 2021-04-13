@@ -95,6 +95,8 @@ public:
     bool RayleighSpongeT; // include thermal term in sponge layer?
     bool DiffSponge;      // Diffusive sponge
 
+    bool LowPRaySponge; // use sponge layer at low pressures (rayleigh drag)
+
     bool output_mean; //whether or not to output time mean quantities
     bool
          out_interm_momentum; //output intermediate momentum values (start of time step & after profx)

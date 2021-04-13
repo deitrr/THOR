@@ -349,6 +349,9 @@ int main(int argc, char** argv) {
     config_reader.append_config_var(
         "order_diff_sponge", order_diff_sponge, order_diff_sponge_default);
 
+    config_reader.append_config_var("LowPRaySponge", sim.LowPRaySponge, LowPRaySponge_default);
+
+
     // Low pressure test
     bool   exit_on_low_pressure_warning = false;
     double pressure_check_limit         = 1e-3;

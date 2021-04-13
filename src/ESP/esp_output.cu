@@ -211,7 +211,10 @@ __host__ void ESP::output(int                    fidx, // Index of output file
 
         s.append_value(
             sim.DiffSponge ? 1.0 : 0.0, "/DiffSponge", "-", "Using Diffusive SpongeLayer?");
-
+        s.append_value(sim.LowPRaySponge ? 1.0 : 0.0,
+                       "/LowPRaySponge",
+                       "-",
+                       "Using Low Pressure Rayleigh Sponge Layer?");
         //      DeepModel option
         s.append_value(sim.DeepModel ? 1.0 : 0.0, "/DeepModel", "-", "Using Deep Model");
 
