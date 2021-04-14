@@ -192,7 +192,18 @@ __host__ void ESP::ProfX(const SimulationSetup& sim,
             current_step, "phy_Sponge", (), ("Rho_d", "pressure_d", "Mh_d", "Wh_d", "W_d"))
     }
 
-    lowp_sponge<<<NB, NTH>>>(Mh_d, Wh_d, pressure_d, Altitude_d, Altitudeh_d, timestep, point_num);
+    if (sim.LowPRaySponge) {
+        lowp_sponge<<<NB, NTH>>>(Mh_d,
+                                 Wh_d,
+                                 pressure_d,
+                                 Altitude_d,
+                                 Altitudeh_d,
+                                 Pup_lowp_sponge,
+                                 Pdn_lowp_sponge,
+                                 R_lowp_sponge,
+                                 timestep,
+                                 point_num);
+    }
 
     //  Computes the initial temperature.
     bool      calcT = true;

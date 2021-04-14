@@ -53,6 +53,9 @@ __global__ void lowp_sponge(double *Mh_d,
                             double *pressure_d,
                             double *Altitude_d,
                             double *Altitudeh_d,
+                            double  Pup,
+                            double  Pdown,
+                            double  kmax,
                             double  time_step,
                             int     num) {
 
@@ -61,11 +64,11 @@ __global__ void lowp_sponge(double *Mh_d,
     int lev = blockIdx.y;
 
     if (id < num) {
-        double Pdown  = 1e-3 * 1e5; // lowest pressure to apply sponge
-        double Pup    = 1e-6 * 1e5; // sponge reaches maximum at this pressure
+        //double Pdown  = 1e-3 * 1e5; // lowest pressure to apply sponge
+        // double Pup    = 1e-6 * 1e5; // sponge reaches maximum at this pressure
         double eta    = log10(pressure_d[id * nv + lev]) / log10(Pup);
         double eta_sp = log10(Pdown) / log10(Pup);
-        double kmax   = 1e-3; //max value of sponge
+        // double kmax   = 1e-3; //max value of sponge
         double ksp;
 
         //calculate strength of sponge
