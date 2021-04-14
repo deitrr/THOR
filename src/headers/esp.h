@@ -172,6 +172,11 @@ public:
     double    ns_diff_sponge;
     const int order_diff_sponge;
 
+    //low pressure sponge (Rayleigh)
+    double R_lowp_sponge;
+    double Pup_lowp_sponge; //pressure where it reaches maximum (low pressure bound)
+    double Pdn_lowp_sponge; //pressure where it goes to zero  (high pressure bound)
+
     //  energy, ang momentum and mass globdiag
     double *Etotal_h;     //total energy (internal+kinetic+gravit) in control volume
     double  GlobalE_h;    //total energy over entire atmosphere
@@ -414,7 +419,10 @@ public:
         thermo_equation_types thermo_equation_,
         bool                  surface_config,
         double                Csurf_config,
-        Insolation &          insolation_);
+        Insolation &          insolation_,
+        double                R_lowp_sponge_,
+        double                Pup_lowp_sponge_,
+        double                Pdn_lowp_sponge_);
 
     ~ESP();
 

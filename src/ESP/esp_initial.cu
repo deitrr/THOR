@@ -118,7 +118,10 @@ __host__ ESP::ESP(int *                 point_local_,
                   thermo_equation_types thermo_equation_,
                   bool                  surface_config,
                   double                Csurf_config,
-                  Insolation &          insolation_) :
+                  Insolation &          insolation_,
+                  double                R_lowp_sponge_,
+                  double                Pup_lowp_sponge_,
+                  double                Pdn_lowp_sponge_) :
     nl_region(nl_region_),
     nr(nr_),
     point_num(point_num_),
@@ -174,6 +177,10 @@ __host__ ESP::ESP(int *                 point_local_,
 
     t_shrink  = t_shrink_;
     max_count = max_count_;
+
+    R_lowp_sponge   = R_lowp_sponge_;
+    Pup_lowp_sponge = Pup_lowp_sponge_ * 1e5;
+    Pdn_lowp_sponge = Pdn_lowp_sponge_ * 1e5;
 
     Tint     = Tint_;
     kappa_lw = kappa_lw_;

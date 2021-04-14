@@ -68,6 +68,9 @@
 #define damp_w_to_mean_default true   // damps w toward zonal mean (otherwise to zero)
 
 #define LowPRaySponge_default false // use sponge layer at low pressures (rayleigh drag)
+#define R_lowp_sponge_default 1e-3
+#define Pup_lowp_sponge_default 1e-6
+#define Pdn_lowp_sponge_default 1e-3
 
 #define DiffSponge_default false    // use diffusive sponge
 #define ns_diff_sponge_default 0.75 // Lowest level of sponge layer

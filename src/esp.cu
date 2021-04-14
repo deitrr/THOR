@@ -327,6 +327,7 @@ int main(int argc, char** argv) {
     double ns_diff_sponge;
     int    order_diff_sponge;
     string raysp_calc_mode_str("imp");
+    double R_lowp_sponge, Pup_lowp_sponge, Pdn_lowp_sponge;
 
     config_reader.append_config_var("RayleighSponge", sim.RayleighSponge, RayleighSponge_default);
     config_reader.append_config_var(
@@ -350,7 +351,9 @@ int main(int argc, char** argv) {
         "order_diff_sponge", order_diff_sponge, order_diff_sponge_default);
 
     config_reader.append_config_var("LowPRaySponge", sim.LowPRaySponge, LowPRaySponge_default);
-
+    config_reader.append_config_var("R_lowp_sponge", R_lowp_sponge, R_lowp_sponge_default);
+    config_reader.append_config_var("Pup_lowp_sponge", Pup_lowp_sponge, Pup_lowp_sponge_default);
+    config_reader.append_config_var("Pdn_lowp_sponge", Pdn_lowp_sponge, Pdn_lowp_sponge_default);
 
     // Low pressure test
     bool   exit_on_low_pressure_warning = false;
@@ -1056,7 +1059,10 @@ int main(int argc, char** argv) {
           thermo_equation,
           surface_config,
           Csurf_config,
-          insolation);
+          insolation,
+          R_lowp_sponge,
+          Pup_lowp_sponge,
+          Pdn_lowp_sponge);
 
     USE_BENCHMARK();
 
@@ -1168,10 +1174,10 @@ int main(int argc, char** argv) {
     log::printf("   Sponge layer\n");
     log::printf("   Rayleigh drag sponge layer       = %s.\n",
                 sim.RayleighSponge ? "true" : "false");
-    log::printf("   Rayleigh sponge strength (horiz) = %g.\n", X.Ruv_sponge);
-    log::printf("   Rayleigh sponge strength (vert)  = %g.\n", X.Rw_sponge);
+    log::printf("   Rayleigh sponge strength (horiz) = %g 1/s.\n", X.Ruv_sponge);
+    log::printf("   Rayleigh sponge strength (vert)  = %g 1/s.\n", X.Rw_sponge);
     log::printf("   Rayleigh sponge latitude bins    = %d.\n", X.nlat_bins);
-    log::printf("   Rayleigh sponge start height     = %f.\n", X.ns_ray_sponge);
+    log::printf("   Rayleigh sponge start height     = %f * Top_altitude.\n", X.ns_ray_sponge);
     log::printf("   Damp to zonal mean (horiz/vert)  = (%s/%s).\n",
                 X.damp_uv_to_mean ? "true" : "false",
                 X.damp_w_to_mean ? "true" : "false");
@@ -1180,6 +1186,12 @@ int main(int argc, char** argv) {
     log::printf("   Diff Sponge (horiz) order        = %d.\n", X.order_diff_sponge);
     log::printf("   Diff sponge strength             = %g.\n", X.Dv_sponge);
     log::printf("   Diff sponge start height         = %f.\n", X.ns_diff_sponge);
+
+    log::printf("   Low pressure Rayleigh sponge     = %s.\n",
+                sim.LowPRaySponge ? "true" : "false");
+    log::printf("   Low P Rayleigh sponge strength   = %g 1/s.\n", X.R_lowp_sponge);
+    log::printf("   Low P Rayleigh sponge top        = %g bar.\n", X.Pup_lowp_sponge * 1e-5);
+    log::printf("   Low P Rayleigh sponge bottom     = %g bar.\n", X.Pdn_lowp_sponge * 1e-5);
 
 
     log::printf("    \n");
