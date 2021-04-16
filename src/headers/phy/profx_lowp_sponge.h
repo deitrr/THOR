@@ -51,11 +51,13 @@
 __global__ void lowp_sponge(double *Mh_d,
                             double *Wh_d,
                             double *pressure_d,
+                            double *Rho_d,
                             double *Altitude_d,
                             double *Altitudeh_d,
                             double  Pup,
                             double  Pdown,
                             double  kmax,
+                            double  Rd,
                             double  time_step,
                             int     num) {
 
@@ -70,6 +72,7 @@ __global__ void lowp_sponge(double *Mh_d,
         double eta_sp = log10(Pdown) / log10(Pup);
         // double kmax   = 1e-3; //max value of sponge
         double ksp;
+        double Tlim = 1000;
 
         //calculate strength of sponge
         if (pressure_d[id * nv + lev] > Pdown) {
@@ -91,5 +94,10 @@ __global__ void lowp_sponge(double *Mh_d,
         //vertical needs to be done a bit differently
         //interpolate pressure to interfaces
         //no need to damp top interface so indexing stays the same
+
+        //also temperature
+        double T = pressure_d[id * nv + lev] / Rd / Rho_d[id * nv + lev];
+        pressure_d[id * nv + lev] =
+            Rd * Rho_d[id * nv + lev] * (T / time_step + ksp * Tlim) / (1.0 / time_step + ksp);
     }
 }

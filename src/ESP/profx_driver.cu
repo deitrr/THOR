@@ -196,11 +196,13 @@ __host__ void ESP::ProfX(const SimulationSetup& sim,
         lowp_sponge<<<NB, NTH>>>(Mh_d,
                                  Wh_d,
                                  pressure_d,
+                                 Rho_d,
                                  Altitude_d,
                                  Altitudeh_d,
                                  Pup_lowp_sponge,
                                  Pdn_lowp_sponge,
                                  R_lowp_sponge,
+                                 sim.Rd,
                                  timestep,
                                  point_num);
     }

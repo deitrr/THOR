@@ -124,27 +124,28 @@ def edit_init_file(config_set):
     dh = np.float(config_set['Top_altitude'])/nv
     final_height = np.arange(dh/2,np.float(config_set['Top_altitude']),dh)
 
-    fvert = open(config_set['vertical_file'],'r+')
-    vert_keys = fvert.readlines()[0].split()
-    fvert.close()
+    if config_set['vertical_file'] != None:
+        fvert = open(config_set['vertical_file'],'r+')
+        vert_keys = fvert.readlines()[0].split()
+        fvert.close()
 
-    if not 'Height' in vert_keys:
-        print("Error! Vertical data file {} must include 'Height'".format(config_set['vertical_file']))
-        exit(-1)
+        if not 'Height' in vert_keys:
+            print("Error! Vertical data file {} must include 'Height'".format(config_set['vertical_file']))
+            exit(-1)
 
-    columns = np.loadtxt(config_set['vertical_file'],skiprows=1)
-    vert_struct = {}
-    for col in np.arange(len(vert_keys)):
-        vert_struct[vert_keys[col]] = columns[:,col]
+        columns = np.loadtxt(config_set['vertical_file'],skiprows=1)
+        vert_struct = {}
+        for col in np.arange(len(vert_keys)):
+            vert_struct[vert_keys[col]] = columns[:,col]
 
-    vert_out = {}
-    for key in vert_struct.keys():
-        if key in openh5.keys():
-            vert_out[key] = interp.pchip_interpolate(vert_struct['Height'],vert_struct[key],final_height)
+        vert_out = {}
+        for key in vert_struct.keys():
+            if key in openh5.keys():
+                vert_out[key] = interp.pchip_interpolate(vert_struct['Height'],vert_struct[key],final_height)
 
-    for i in np.arange(np.int(point_num)):
-        for key in vert_out.keys():
-            openh5[key][i*nv:i*nv+nv] = vert_out[key]
+        for i in np.arange(np.int(point_num)):
+            for key in vert_out.keys():
+                openh5[key][i*nv:i*nv+nv] = vert_out[key]
 
     #--------winds-------------------------------
     if 'wind_prof' in config_set:
@@ -152,7 +153,7 @@ def edit_init_file(config_set):
         import pdb; pdb.set_trace()
         grid_file = output_dir+'/esp_initial_grid.h5'
         if os.path.exists(grid_file):
-            gridh5 = h5py.File(grid_file)
+            gridh5 = h5py.File(grid_file,'r')
         else:
             print("Grid h5 file {} not found!".format(grid_file))
             exit(-1)
