@@ -447,6 +447,10 @@ __global__ void Diffusion_Op(double* diffmh_d,
     if (laststep) {
         if (var == 0) {
             diffrh_d[id * nv + lev] = lap;
+            if (DiffSponge && order_diff_sponge == 2) {
+                diffrh_d[id * nv * 3 + lev * 3 + 0] +=
+                    Kdh2_d[lev] * diff_d[id * nv * 6 + lev * 6 + var];
+            }
         }
         if (var == 1) {
             diffmh_d[id * nv * 3 + lev * 3 + 0] = lap;
@@ -786,8 +790,13 @@ __global__ void Diffusion_Op_Poles(double* diffmh_d,
                * vdiff;
     }
     if (laststep) {
-        if (var == 0)
+        if (var == 0) {
             diffrh_d[id * nv + lev] = lap;
+            if (DiffSponge && order_diff_sponge == 2) {
+                diffrh_d[id * nv * 3 + lev * 3 + 0] +=
+                    Kdh2_d[lev] * diff_d[id * nv * 6 + lev * 6 + var];
+            }
+        }
         if (var == 1) {
             diffmh_d[id * 3 * nv + lev * 3 + 0] = lap;
             if (DiffSponge && order_diff_sponge == 2) {
