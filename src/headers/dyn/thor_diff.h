@@ -478,6 +478,10 @@ __global__ void Diffusion_Op(double* diffmh_d,
         }
         if (var == 5)
             diffpr_d[id * nv + lev] = lap;
+        if (DiffSponge && order_diff_sponge == 2) {
+            diffpr_d[id * nv + lev] +=
+                Rho_d[id * nv + lev] * Kdh2_d[lev] * diff_d[id * nv * 6 + lev * 6 + var];
+        }
     }
     else {
         diff_d[id * nv * 6 + lev * 6 + var] = lap;
