@@ -1,14 +1,18 @@
 # THOR #
-[![Build Status](https://travis-ci.com/exoclime/THOR-dev.svg?token=tGqUSajNhVAPSfPqaERE&branch=master)](https://travis-ci.com/exoclime/THOR-dev)
+
+![CI](https://github.com/exoclime/THOR/workflows/CI/badge.svg)
+
 ### Flexible Global Circulation Model to Explore Planetary Atmospheres
 
 *THOR* is a GCM that solves the three-dimensional non-hydrostatic Euler equations on an icosahedral grid. *THOR* was designed to run on Graphics Processing Units (GPUs).
 
-If you use this code please cite: [Mendonca, J.M., Grimm, S.L., Grosheintz, L., & Heng, K., ApJ, 829, 115, 2016](http://iopscience.iop.org/article/10.3847/0004-637X/829/2/115/meta)
+If you use this code please cite: [Mendonça, J.M., Grimm, S.L., Grosheintz, L., & Heng, K., ApJ, 829, 115, 2016](http://iopscience.iop.org/article/10.3847/0004-637X/829/2/115/meta)
+
+If using version 2.0 or later, please also cite: [Deitrick, R., Mendonça, J.M., Schroffenegger, U., Grimm, S.L., Tsai, S.-M., & Heng, K., ApJS, 248, 2, 2020](https://iopscience.iop.org/article/10.3847/1538-4365/ab930e)
 
 Current code owners: Joao Mendonca: joao.mendonca@space.dtu.dk, Russell Deitrick: russell.deitrick@csh.unibe.ch, Urs Schroffenegger: urs.schroffenegger@csh.unibe.ch
 
-###### Copyright (C) 2017-2018 Exoclimes Simulation Platform ######
+###### Copyright (C) 2017-2021 Exoclimes Simulation Platform ######
 
 ### BUILD & RUN THOR (TL;DR instructions)
 
@@ -43,4 +47,4 @@ Finally, run
 
 [View our wiki pages here](https://github.com/exoclime/THOR/wiki)
 
-[Tutorial from ESP Summer School 2019](https://github.com/exoclime/THOR/blob/master/usingthor.pdf)
+[Tutorial from ESP Summer School 2019](https://github.com/exoclime/THOR/wiki/tutorial/usingthor.pdf)

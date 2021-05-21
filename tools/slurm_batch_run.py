@@ -81,6 +81,9 @@ parser.add_argument("-p", "--prof", action="store_true", default=False, help='Ru
 parser.add_argument("-o", "--output", type=str, default=None, help='Output dir name')
 parser.add_argument("-r", "--report", action="store_true", default=False, help="Run reporting code at end of sim")
 parser.add_argument("-d", "--dependency", action="store", type=int, default=None, help="Run after this job ID")
+parser.add_argument("-par", "--partition", nargs=1, default=['gpu-invest'],help='specify partition')
+
+parser.add_argument("--pp", action="append", type=str, default=[], help="Post processing to run")
 
 args = parser.parse_args()
 initial_file = args.input_file[0]
@@ -100,13 +103,15 @@ if args.output is not None:
 else:
     output_arg = ""
 
+partition = args.partition[0]
+
 if args.dependency is not None:
     last_id = args.dependency
 else:
     last_id = None
 
 
-def start_esp(args, esp_command, esp_args, initial_file, profiling=None):
+def start_esp(args, esp_command, esp_args, initial_file, index=0, profiling=None):
     batch_id_re = re.compile("Submitted batch job (\d+)\n")
     print(f"Batch job args: {args}")
     with subprocess.Popen(args,
@@ -115,7 +120,7 @@ def start_esp(args, esp_command, esp_args, initial_file, profiling=None):
                           stderr=subprocess.PIPE,
                           universal_newlines=True) as proc:
         if profiling is not None:
-            prof_cmd = f"nvprof --export-profile {profiling}"
+            prof_cmd = f"nvprof --export-profile {profiling}.{index}"
         else:
             prof_cmd = ''
         proc.stdin.write("#!/bin/sh\n")
@@ -152,25 +157,25 @@ output_file = str(log_dir / f"slurm-esp-{job_name}-%j.out")  # %j for job index
 
 
 sbatch_args = ['sbatch',
-        '-D', working_dir,
-        '-J', job_name,
-        '-n', str(1),
-        '--gres', config_data['gpu_key'],
-        '-p', config_data['partition'],
-        '--time', time_limit,
-        '--mail-type=ALL',
-        '--mail-user=' + mail,
-        '--output=' + output_file,
-        '--signal=INT@60']
+               '-D', working_dir,
+               '-n', str(1),
+               '--gres', config_data['gpu_key'],
+               '-p', partition,
+               '--mem-per-cpu=8G',
+               '--time', time_limit,
+               '--mail-type=ALL',
+               '--mail-user=' + mail,
+               '--output=' + output_file,
+               '--signal=INT@60']
 esp_command = "bin/esp"
 esp_args = f'-b {output_arg}'
 
 last_success = None
 for i in range(num_jobs):
     if last_id is None:
-        last_success, last_id = start_esp(sbatch_args, esp_command, esp_args, initial_file, profiling=profiling)
+        last_success, last_id = start_esp(sbatch_args + ['-J', f'{job_name}-{i}'], esp_command, esp_args, initial_file, index=i, profiling=profiling)
     elif last_success:
-        last_success, last_id = start_esp(sbatch_args + ['--dependency=afterany:{}'.format(last_id)], esp_command, esp_args, initial_file, profiling=profiling)
+        last_success, last_id = start_esp(sbatch_args + ['--dependency=afterany:{}'.format(last_id), '-J', f'{job_name}-{i}'], esp_command, esp_args, initial_file, index=i, profiling=profiling)
     else:
         print("Error queuing last command")
         exit(-1)
@@ -203,22 +208,21 @@ def start_muninn(args, muninn_command):
 
 
 if args.report:
-    
-    output_file = str(log_dir / f"slurm-muninn-{job_name}-%j.out")  # %j for job index                                   
 
-    
+    output_file = str(log_dir / f"slurm-muninn-{job_name}-%j.out")  # %j for job index
+
     sbatch_args = ['sbatch',
                    '-D', working_dir,
-                   '-J', job_name,
+                   '-J', job_name + "-muninn",
                    '-n', str(1),
                    '--gres', config_data['gpu_key'],
-                   '-p', config_data['partition'],
+                   '-p', partition,
                    '--time', time_limit,
                    '--mail-type=ALL',
                    '--mail-user=' + mail,
                    '--output=' + output_file,
                    '--signal=INT@60']
-    
+
     if args.output is not None:
         muninn_output_arg = f"{args.output}"
     else:
@@ -230,6 +234,63 @@ if args.report:
         last_success, last_id = start_muninn(sbatch_args, muninn_command)
     elif last_success:
         last_success, last_id = start_muninn(sbatch_args + ['--dependency=afterany:{}'.format(last_id)], muninn_command)
+    else:
+        print("Error queuing last command")
+        exit(-1)
+
+
+def start_postprocessing(args, pp_command):
+    batch_id_re = re.compile("Submitted batch job (\d+)\n")
+    print(f"Batch job args: {args}")
+    with subprocess.Popen(args,
+                          stdin=subprocess.PIPE,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE,
+                          universal_newlines=True) as proc:
+
+        proc.stdin.write("#!/bin/sh\n")
+        srun_command = f"srun {pp_command}\n"
+        proc.stdin.write(srun_command)
+        proc.stdin.close()
+        procid_string = proc.stdout.read()
+        print(proc.stderr.read())
+        m = batch_id_re.match(procid_string)
+        if m is not None:
+            batch_id = m.group(1)
+            print(f"Submitted pos processing batch with ID: {batch_id}\nCommand: {srun_command}")
+            return True, batch_id
+        else:
+            print(f"Error reading batch id from posprocessing return: {procid_string}\nCommand: {srun_command}")
+
+            return False, -1
+
+for pp in args.pp:
+    output_file = str(log_dir / f"slurm-postproc-{job_name}-%j.out")  # %j for job index
+
+    sbatch_args = ['sbatch',
+                   '-D', working_dir,
+                   '-J', job_name + "-postproc",
+                   '-n', str(1),
+                   '--gres', config_data['gpu_key'],
+                   '-p', partition,
+                   '--mem-per-cpu=8G',
+                   '--time', time_limit,
+                   '--mail-type=ALL',
+                   '--mail-user=' + mail,
+                   '--output=' + output_file,
+                   '--signal=INT@60']
+
+    if args.output is not None:
+        postproc_output_arg = f"{args.output}"
+    else:
+        print("need to specify path to directory for postprocessing")
+        exit(-1)
+
+    postproc_command = f"./tools/postprocessingsteps.py {postproc_output_arg} {pp}"
+    if last_id is None:
+        last_success, last_id = start_postprocessing(sbatch_args, postproc_command)
+    elif last_success:
+        last_success, last_id = start_postprocessing(sbatch_args + ['--dependency=afterany:{}'.format(last_id)], postproc_command)
     else:
         print("Error queuing last command")
         exit(-1)

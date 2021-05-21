@@ -16,14 +16,14 @@
 //     <http://www.gnu.org/licenses/>.
 // ==============================================================================
 //
-// ESP -  Exoclimes Simulation Platform. (version 2.0)
+// ESP -  Exoclimes Simulation Platform. (version 2.3)
 //
 //
 //
 // Method: [1] - Builds the icosahedral grid (Mendonca et al., 2016).
 //         Iteration:
-//         [2] - Calls the dynamical core THOR (Mendonca et al., 2016).
-//         [3] - Calls the physical core ProfX.
+//         [2] - Calls the physical core ProfX.
+//         [3] - Calls the dynamical core THOR (Mendonca et al., 2016).
 //         END
 ////
 //
@@ -72,14 +72,9 @@
 #include "phy_modules.h"
 
 #include "debug.h"
+#include "diagnostics.h"
 #ifdef BENCHMARKING
 #    warning "Compiling with benchmarktest enabled"
-#    ifdef BENCH_POINT_COMPARE
-#        warning "Compare flag enabled"
-#    endif
-#    ifdef BENCH_POINT_WRITE
-#        warning "Write flag enabled"
-#    endif
 #endif
 
 #include <csignal>
@@ -89,6 +84,14 @@ using std::string;
 #include "log_writer.h"
 
 #include "cuda_device_memory.h"
+
+#include "reduction_min.h"
+
+#include "insolation.h"
+
+#include "git-rev.h"
+
+#include "hdf5.h"
 
 enum e_sig { ESIG_NOSIG = 0, ESIG_SIGTERM = 1, ESIG_SIGINT = 2 };
 
@@ -106,6 +109,11 @@ void sigint_handler(int sig) {
     log::printf("SIGINT caught, trying to exit gracefully\n");
 }
 
+// To clean up at exit in all conditions (like when calling exit(EXIT_FAILURE)
+void exit_handler() {
+    // Clean up device memory
+    cuda_device_memory_manager::get_instance().deallocate();
+}
 
 std::string duration_to_str(double delta) {
     unsigned int days = delta / (24 * 3600);
@@ -141,6 +149,17 @@ void get_cuda_mem_usage(size_t& total_bytes, size_t& free_bytes) {
 }
 
 
+void print_hdf_5_version() {
+    unsigned int majnum = 0;
+    unsigned int minnum = 0;
+    unsigned int relnum = 0;
+
+    H5get_libversion(&majnum, &minnum, &relnum);
+
+    printf("using HDF5 version %d.%d.%d\n", majnum, minnum, relnum);
+}
+
+
 int main(int argc, char** argv) {
     //*****************************************************************
     // Parse input arguments
@@ -157,6 +176,8 @@ int main(int argc, char** argv) {
     // argparser.add_arg("b", "bool", false, "this is a bool");
     // argparser.add_arg("d", "double", 1e-5, "this is a double");
     // argparser.add_arg("s", "string", string("value"), "this is a string");
+
+    // for bool, the default value given is the value that will be returned if the option is present.
 
     string default_config_filename("ifile/earth.thr");
 
@@ -175,6 +196,11 @@ int main(int argc, char** argv) {
 
     argparser.add_arg("b", "batch", true, "Run as batch");
 
+#ifdef BENCHMARKING
+    // binary comparison type
+    argparser.add_arg("bw", "binwrite", true, "binary comparison write");
+    argparser.add_arg("bc", "bincompare", true, "binary comparison compare");
+#endif // BENCHMARKING
 
     // Parse arguments, exit on fail
     bool parse_ok = argparser.parse(argc, argv);
@@ -190,12 +216,34 @@ int main(int argc, char** argv) {
     string config_filename = "";
     argparser.get_positional_arg(config_filename);
 
+#ifdef BENCHMARKING
+    // binary comparison reading
+    bool bincomp_write     = false;
+    bool bincomp_write_arg = false;
+    if (argparser.get_arg("binwrite", bincomp_write_arg))
+        bincomp_write = bincomp_write_arg;
+
+    bool bincomp_compare     = false;
+    bool bincomp_compare_arg = false;
+    if (argparser.get_arg("bincompare", bincomp_compare_arg))
+        bincomp_compare = bincomp_compare_arg;
+
+    if (bincomp_compare && bincomp_write) {
+        log::printf(
+            "ARGUMENT ERROR: binwrite and bincompare can't be set to true at the same time\n");
+        exit(-1);
+    }
+#endif // BENCHMARKING
+
     //*****************************************************************
     log::printf("\n Starting ESP!");
     log::printf("\n\n version 2.3\n");
     log::printf(" Compiled on %s at %s.\n", __DATE__, __TIME__);
 
     log::printf(" build level: %s\n", BUILD_LEVEL);
+
+    log::printf(" git branch: %s\n", GIT_BRANCH_RAW);
+    log::printf(" git hash: %s\n", GIT_HASH_RAW);
 
 
     //*****************************************************************
@@ -231,6 +279,9 @@ int main(int argc, char** argv) {
 
     // ...and separate div damping
     config_reader.append_config_var("DivDampc", sim.DivDampc, sim.DivDampc);
+    // vertical hyper diffusion
+    config_reader.append_config_var("Diffc_v", sim.Diffc_v, sim.Diffc_v);
+
 
     // grid
     bool   spring_dynamics = true;
@@ -246,12 +297,21 @@ int main(int argc, char** argv) {
     // Diffusion
 
     config_reader.append_config_var("HyDiff", sim.HyDiff, HyDiff_default);
+    config_reader.append_config_var("HyDiffOrder", sim.HyDiffOrder, HyDiffOrder_default);
     config_reader.append_config_var("DivDampP", sim.DivDampP, DivDampP_default);
+    config_reader.append_config_var("VertHyDiff", sim.VertHyDiff, VertHyDiff_default);
+    config_reader.append_config_var(
+        "VertHyDiffOrder", sim.VertHyDiffOrder, VertHyDiffOrder_default);
+
 
     // Model options
     config_reader.append_config_var("NonHydro", sim.NonHydro, NonHydro_default);
     config_reader.append_config_var("DeepModel", sim.DeepModel, DeepModel_default);
     config_reader.append_config_var("output_mean", sim.output_mean, output_mean_default);
+    config_reader.append_config_var(
+        "output_diffusion", sim.output_diffusion, output_diffusion_default);
+    config_reader.append_config_var(
+        "out_interm_momentum", sim.out_interm_momentum, out_interm_momentum_default);
 
     // top sponge layer options
     int    nlat_bins;
@@ -289,6 +349,13 @@ int main(int argc, char** argv) {
     config_reader.append_config_var(
         "order_diff_sponge", order_diff_sponge, order_diff_sponge_default);
 
+    // Low pressure test
+    bool   exit_on_low_pressure_warning = false;
+    double pressure_check_limit         = 1e-3;
+    config_reader.append_config_var(
+        "exit_on_low_pressure_warning", exit_on_low_pressure_warning, exit_on_low_pressure_warning);
+    config_reader.append_config_var(
+        "pressure_check_limit", pressure_check_limit, pressure_check_limit);
     // Initial conditions
     // rest supersedes initial condition entry,
     // but if initial condition set from  command line, it overrides
@@ -305,12 +372,13 @@ int main(int argc, char** argv) {
         "core_benchmark", core_benchmark_str, string(core_benchmark_default)); //
 
     config_reader.append_config_var("conv_adj", sim.conv_adj, conv_adj_default);
+    config_reader.append_config_var("conv_adj_iter", sim.conv_adj_iter, conv_adj_iter_default);
 
     int GPU_ID_N = 0;
     config_reader.append_config_var("GPU_ID_N", GPU_ID_N, GPU_ID_N_default);
 
-    int n_out = 1000;
-    config_reader.append_config_var("n_out", n_out, n_out_default);
+    // int n_out = 1000;
+    config_reader.append_config_var("n_out", sim.n_out, n_out_default);
 
     string output_path = "results";
     config_reader.append_config_var("results_path", output_path, string(output_path_default));
@@ -318,15 +386,17 @@ int main(int argc, char** argv) {
     config_reader.append_config_var("gcm_off", sim.gcm_off, gcm_off_default);
     config_reader.append_config_var("globdiag", sim.globdiag, globdiag_default);
 
+    config_reader.append_config_var("single_column", sim.single_column, single_column_default);
+
     bool custom_global_n_out;
     config_reader.append_config_var(
         "custom_global_n_out", custom_global_n_out, custom_global_n_out_default);
-    int global_n_out = n_out;
+    int global_n_out = sim.n_out;
     config_reader.append_config_var("global_n_out", global_n_out, global_n_out_default);
 
     bool custom_log_n_out;
     config_reader.append_config_var("custom_log_n_out", custom_log_n_out, custom_log_n_out_default);
-    int log_n_out = n_out;
+    int log_n_out = sim.n_out;
     config_reader.append_config_var("log_n_out", log_n_out, log_n_out_default);
 
     // Init PT profile
@@ -354,10 +424,36 @@ int main(int argc, char** argv) {
     config_reader.append_config_var(
         "thermo_equation", thermo_equation_str, string(thermo_equation_default));
 
+    // vertical grid refinement in lower atmos (for turbulent BL)
+    bool vert_refined = false;
+    //int  n_bl_layers  = 9;
+    config_reader.append_config_var("vert_refined", vert_refined, vert_refined_default);
+    //config_reader.append_config_var("n_bl_layers", n_bl_layers, n_bl_layers_default);
+    double transition_altitude = 1000; //height of transition from exponential to linear spacing
+    double lowest_layer_thickness =
+        2; //height of first interface above surface (thickness of lowest layer)
+    config_reader.append_config_var(
+        "transition_altitude", transition_altitude, transition_altitude_default);
+    config_reader.append_config_var(
+        "lowest_layer_thickness", lowest_layer_thickness, lowest_layer_thickness_default);
+
+
+    bool surface_config = false; // use solid/liquid surface at altitude 0
+    config_reader.append_config_var("surface", surface_config, surface_config);
+    // properties for a solid/liquid surface
+    double Csurf_config = 1e7; // heat capacity of surface (J K^-1 m^-2)
+    config_reader.append_config_var("Csurf", Csurf_config, Csurf_config);
+
+
     //*****************************************************************
-    // read configs for modules
+    // set configs for modules
     phy_modules_generate_config(config_reader);
 
+    // Create insolation object
+    Insolation insolation;
+    // set config for insolation
+    // insolation will be enabled on demand by modules needing it.
+    insolation.configure(config_reader);
 
     //*****************************************************************
     // Read config file
@@ -460,7 +556,7 @@ int main(int argc, char** argv) {
     config_OK &= check_greater("vlevel", vlevel, 0);
 
     config_OK &= check_greater("GPU_ID_N", GPU_ID_N, -1);
-    config_OK &= check_greater("n_out", n_out, 0);
+    config_OK &= check_greater("n_out", sim.n_out, 0);
 
     if (simulation_ID.length() < 160) {
         sprintf(sim.simulation_ID, "%s", simulation_ID.c_str());
@@ -468,6 +564,17 @@ int main(int argc, char** argv) {
     else {
         log::printf("Bad value for config variable simulation_ID: [%s]\n", simulation_ID.c_str());
 
+        config_OK = false;
+    }
+
+    if (sim.HyDiffOrder <= 2 || sim.HyDiffOrder % 2) {
+        log::printf("Bad value for HyDiffOrder! Must be multiple of 2 greater than/equal to 4.");
+        config_OK = false;
+    }
+
+    if (sim.VertHyDiffOrder <= 2 || sim.VertHyDiffOrder % 2) {
+        log::printf(
+            "Bad value for VertHyDiffOrder! Must be multiple of 2 greater than/equal to 4.");
         config_OK = false;
     }
 
@@ -631,6 +738,11 @@ int main(int argc, char** argv) {
         }
     }
 
+    if ((sim.single_column == true) && (sim.gcm_off == false)) {
+        log::printf("gcm_off must be true when using single_column\n");
+        config_OK &= false;
+    }
+
     if (!config_OK) {
         log::printf("Error in configuration file\n");
         exit(-1);
@@ -639,13 +751,15 @@ int main(int argc, char** argv) {
 
 #ifdef BENCHMARKING
     string output_path_ref = path(output_path).to_string();
-#    ifdef BENCH_POINT_COMPARE
-    output_path = (path(output_path) / string("compare")).to_string();
-#    endif // BENCH_POINT_COMPARE
-#    ifdef BENCH_POINT_WRITE
-    output_path = (path(output_path) / string("write")).to_string();
-#    endif // BENCH_POINT_WRITE
-#endif     // BENCHMARKING
+    if (bincomp_compare) {
+        log::printf("\nWARNING: Running with binary comparison ON\n\n");
+        output_path = (path(output_path) / string("compare")).to_string();
+    }
+    if (bincomp_write) {
+        log::printf("\nWARNING: Running with binary comparison data write ON\n\n");
+        output_path = (path(output_path) / string("write")).to_string();
+    }
+#endif // BENCHMARKING
 
 
     // check output config directory
@@ -669,10 +783,12 @@ int main(int argc, char** argv) {
     log::printf("Time: %s\n\n", std::ctime(&prog_start_time));
 
 
-    log::printf_logonly("\n\n version 2.0\n");
+    log::printf_logonly("\n\n version 2.3\n");
     log::printf_logonly(" Compiled on %s at %s.\n", __DATE__, __TIME__);
 
     log::printf_logonly(" build level: %s\n\n", BUILD_LEVEL);
+    log::printf_logonly(" git branch: %s\n", GIT_BRANCH_RAW);
+    log::printf_logonly(" git hash: %s\n", GIT_HASH_RAW);
 
 
     // Data logger
@@ -785,7 +901,9 @@ int main(int argc, char** argv) {
         logwriter.prepare_diagnostics_file(continue_sim);
     }
 
-
+    //*****************************************************************
+    // print HDF5 version
+    print_hdf_5_version();
     //*****************************************************************
     //  Set the GPU device.
     cudaError_t error;
@@ -869,9 +987,16 @@ int main(int argc, char** argv) {
                  sim.A,                 // Planet radius
                  sim.Top_altitude,      // Top of the model's domain
                  initialize_zonal_mean, // Use zonal mean in rayleigh sponge layer?
-                 &max_count);
+                 &max_count,
+                 vert_refined,
+                 lowest_layer_thickness,
+                 transition_altitude);
 
     //  Define object X.
+    int point_num_temp = Grid.point_num;
+    if (sim.single_column)
+        point_num_temp = 1;
+
     ESP X(Grid.point_local,    // First neighbours
           Grid.maps,           // Grid domains
           Grid.lonlat,         // Longitude and latitude of the grid points
@@ -909,12 +1034,14 @@ int main(int argc, char** argv) {
           order_diff_sponge,
           t_shrink, // time to shrink sponge layer
           shrink_sponge,
-          Grid.point_num, // Number of grid points
+          point_num_temp, // Number of grid points
           sim.globdiag,   // compute globdiag values
           core_benchmark, // benchmark test type
           logwriter,      // Log writer
           max_count,
           sim.output_mean,
+          sim.out_interm_momentum,
+          sim.output_diffusion,
           init_PT_profile,
           Tint,
           kappa_lw,
@@ -923,12 +1050,14 @@ int main(int argc, char** argv) {
           bv_freq,
           ultrahot_thermo,
           ultrahot_heating,
-          thermo_equation);
-
+          thermo_equation,
+          surface_config,
+          Csurf_config,
+          insolation);
 
     USE_BENCHMARK();
 
-    INIT_BENCHMARK(X, Grid, output_path_ref);
+    INIT_BENCHMARK(X, Grid, output_path_ref, bincomp_write, bincomp_compare);
 
     BENCH_POINT("0",
                 "Grid",
@@ -995,6 +1124,9 @@ int main(int argc, char** argv) {
     log::printf("   Rd     = %f J/(Kg K)\n", sim.Rd);
     log::printf("   Cp     = %f J/(Kg K)\n", sim.Cp);
     log::printf("   Tmean  = %f K\n", sim.Tmean);
+    // surface parameters
+    log::printf("   Surface          = %s.\n", surface_config ? "true" : "false");
+    log::printf("   Surface Heat Capacity       = %f J/K/m^2.\n", Csurf_config);
     //
     //  Numerical Methods
     log::printf("\n");
@@ -1007,12 +1139,45 @@ int main(int argc, char** argv) {
     log::printf("   Resolution      = %f deg.\n",
                 (180 / M_PI) * sqrt(2 * M_PI / 5) / pow(2, glevel));
     log::printf("   Vertical layers = %d.\n", Grid.nv);
+    log::printf("   Top altitude    = %g. m\n", sim.Top_altitude);
     log::printf("   ********** \n");
     log::printf("   Split-Explicit / HE-VI \n");
     log::printf("   FV = Central finite volume \n");
     log::printf("   Time integration =  %d s.\n", nsmax * timestep);
     log::printf("   Large time-step  =  %d s.\n", timestep);
     log::printf("   Start time       =  %f s.\n", simulation_start_time);
+    log::printf("   Non-Hydro        =  %s.\n", sim.NonHydro ? "true" : "false");
+    log::printf("   Deep Model       =  %s.\n", sim.DeepModel ? "true" : "false");
+    log::printf("   Convective adj.  =  %s.\n", sim.conv_adj ? "true" : "false");
+
+    log::printf("   ********** \n");
+    log::printf("   Numerical diffusion\n");
+    log::printf("   Hyperdiffusion (horizontal)   = %s.\n", sim.HyDiff ? "true" : "false");
+    log::printf("   Hyperdiffusion (horiz) order  = %d.\n", sim.HyDiffOrder);
+    log::printf("   Hyperdiffusion (horiz) coeff. = %g.\n", sim.Diffc);
+    log::printf("   Hyperdiffusion (vertical)     = %s.\n", sim.VertHyDiff ? "true" : "false");
+    log::printf("   Hyperdiffusion (vert) order   = %d.\n", sim.VertHyDiffOrder);
+    log::printf("   Hyperdiffusion (vert) coeff.  = %g.\n", sim.Diffc_v);
+    log::printf("   3D Divergence damping         = %s.\n", sim.DivDampP ? "true" : "false");
+    log::printf("   3D Div damping coeff.         = %g.\n", sim.DivDampc);
+
+    log::printf("   ********** \n");
+    log::printf("   Sponge layer\n");
+    log::printf("   Rayleigh drag sponge layer       = %s.\n",
+                sim.RayleighSponge ? "true" : "false");
+    log::printf("   Rayleigh sponge strength (horiz) = %g.\n", X.Ruv_sponge);
+    log::printf("   Rayleigh sponge strength (vert)  = %g.\n", X.Rw_sponge);
+    log::printf("   Rayleigh sponge latitude bins    = %d.\n", X.nlat_bins);
+    log::printf("   Rayleigh sponge start height     = %f.\n", X.ns_ray_sponge);
+    log::printf("   Damp to zonal mean (horiz/vert)  = (%s/%s).\n",
+                X.damp_uv_to_mean ? "true" : "false",
+                X.damp_w_to_mean ? "true" : "false");
+
+    log::printf("   Diffusive sponge layer (horiz)   = %s.\n", sim.DiffSponge ? "true" : "false");
+    log::printf("   Diff Sponge (horiz) order        = %d.\n", X.order_diff_sponge);
+    log::printf("   Diff sponge strength             = %g.\n", X.Dv_sponge);
+    log::printf("   Diff sponge start height         = %f.\n", X.ns_diff_sponge);
+
 
     log::printf("    \n");
 
@@ -1031,6 +1196,7 @@ int main(int argc, char** argv) {
         log::printf("    \n");
         phy_modules_print_config();
         log::printf("    \n");
+        insolation.print_config();
     }
 
     log::printf("   ********** \n");
@@ -1046,10 +1212,18 @@ int main(int argc, char** argv) {
 
     // make a copy of config file (is there a better way to do this?)
     std::ifstream source(config_filename);
-    char          dest_name[256];
+    char          dest_name[512];
     sprintf(dest_name, "%s/config_copy.%d", output_path.c_str(), output_file_idx);
     std::ofstream destin(dest_name);
-    destin << source.rdbuf();
+
+    std::istreambuf_iterator<char> begin_source(source);
+    std::istreambuf_iterator<char> end_source;
+    std::ostreambuf_iterator<char> begin_dest(destin);
+    std::copy(begin_source, end_source, begin_dest);
+
+    source.close();
+    destin.close();
+
 
     // We'll start writnig data to file and running main loop,
     // setup signal handlers to handle gracefully termination and interrupt
@@ -1072,6 +1246,9 @@ int main(int argc, char** argv) {
     if (sigaction(SIGINT, &sigint_action, NULL) == -1) {
         log::printf("Error: cannot handle SIGINT\n"); // Should not happen
     }
+
+    // Register clean up function for exit
+    atexit(exit_handler);
 
     //
     //  Writes initial conditions
@@ -1100,6 +1277,14 @@ int main(int argc, char** argv) {
             X.copy_mean_to_host();
         }
 
+        if (sim.out_interm_momentum == true) {
+            X.copy_interm_mom_to_host();
+        }
+
+        if (sim.output_diffusion == true) {
+            X.copy_diff_to_host();
+        }
+
         X.output(0, // file index
                  sim);
 
@@ -1111,12 +1296,17 @@ int main(int argc, char** argv) {
         step_idx += 1;
     }
 
+    // Create diagnostics tool
+    kernel_diagnostics diag(X);
+
     // *********************************************************************************************
     //  Starting model Integration.
     log::printf(" Starting the model integration.\n\n");
 
     // Start timer
     iteration_timer ittimer(step_idx, nsmax);
+
+    double elapsed_time = 0.0;
 
     //
     //  Main loop. nstep is the current step of the integration and nsmax the maximum
@@ -1133,12 +1323,12 @@ int main(int argc, char** argv) {
 
         //
         //     Physical Core Integration (ProfX)
-        X.ProfX(sim, n_out);
+        X.ProfX(sim, sim.n_out, diag);
 
         if (!sim.gcm_off) {
             //
             //        Dynamical Core Integration (THOR)
-            X.Thor(sim); // simulationt parameters
+            X.Thor(sim, diag); // simulationt parameters
         }
 
         //
@@ -1151,7 +1341,7 @@ int main(int argc, char** argv) {
 
         if (sim.globdiag == true) {
             if ((custom_global_n_out && nstep % global_n_out == 0)
-                || (custom_global_n_out == false && nstep % n_out == 0)) {
+                || (custom_global_n_out == false && nstep % sim.n_out == 0)) {
                 X.globdiag(sim);
                 logwriter.output_globdiag(nstep,
                                           simulation_time,
@@ -1169,7 +1359,7 @@ int main(int argc, char** argv) {
 
         //
         //      Prints output every nout steps
-        if (nstep % n_out == 0 || caught_signal != ESIG_NOSIG) {
+        if (nstep % sim.n_out == 0 || caught_signal != ESIG_NOSIG) {
             X.copy_to_host();
 
             if (sim.globdiag == true)
@@ -1177,6 +1367,14 @@ int main(int argc, char** argv) {
 
             if (sim.output_mean == true) {
                 X.copy_mean_to_host();
+            }
+
+            if (sim.out_interm_momentum == true) {
+                X.copy_interm_mom_to_host();
+            }
+
+            if (sim.output_diffusion == true) {
+                X.copy_diff_to_host();
             }
 
             X.output(output_file_idx, sim);
@@ -1190,11 +1388,12 @@ int main(int argc, char** argv) {
 
         // Timing information
         double      mean_delta_per_step = 0.0;
-        double      elapsed_time        = 0.0;
+        double      this_step_delta     = 0.0;
         double      time_left           = 0.0;
         std::time_t end_time;
 
-        ittimer.iteration(nstep, mean_delta_per_step, elapsed_time, time_left, end_time);
+        ittimer.iteration(
+            nstep, mean_delta_per_step, this_step_delta, elapsed_time, time_left, end_time);
         // format end time
         std::ostringstream end_time_str;
         char               str_time[256];
@@ -1202,7 +1401,7 @@ int main(int argc, char** argv) {
         end_time_str << str_time;
 
         if ((custom_log_n_out && nstep % log_n_out == 0)
-            || (custom_log_n_out == false && nstep % n_out == 0)) {
+            || (custom_log_n_out == false && nstep % sim.n_out == 0)) {
             log::printf(
                 "\n Time step number = %d/%d || Time = %f days. \n\t Elapsed %s || Left: %s || "
                 "Completion: %s. %s",
@@ -1213,11 +1412,26 @@ int main(int argc, char** argv) {
                 duration_to_str(time_left).c_str(),
                 end_time_str.str().c_str(),
                 file_output ? "[saved output]" : "");
+#ifdef STEP_TIMING_INFO
+            log::printf("\n\t Step duration: %f s || Mean step duration %f s",
+                        this_step_delta,
+                        mean_delta_per_step);
+#endif // STEP_TIMING_INFO
 
             // get memory statistics
             size_t total_bytes;
             size_t free_bytes;
             get_cuda_mem_usage(total_bytes, free_bytes);
+
+            // Run pressure check
+            double pressure_min = gpu_min_on_device<1024>(X.pressure_d, X.point_num * X.nv);
+            log::printf("\n min pressure : %g Pa\n", pressure_min);
+            if (pressure_min < pressure_check_limit) {
+                log::printf("\n WARNING: min pressure lower than min pressure limit: %g Pa\n",
+                            pressure_min);
+                if (exit_on_low_pressure_warning)
+                    break;
+            }
 
             // flush log output to file for security
             log::flush();
@@ -1230,6 +1444,7 @@ int main(int argc, char** argv) {
                                          time_left,
                                          mean_delta_per_step,
                                          end_time);
+            log::printf("--\n");
         }
         else {
             printf("\n Time step number = %d/%d || Time = %f days. \n\t Elapsed %s || Left: %s || "
@@ -1241,19 +1456,38 @@ int main(int argc, char** argv) {
                    duration_to_str(time_left).c_str(),
                    end_time_str.str().c_str(),
                    file_output ? "[saved output]" : "");
+#ifdef STEP_TIMING_INFO
+            printf("\n\t Step duration: %f s || Mean step duration %f s",
+                   this_step_delta,
+                   mean_delta_per_step);
+#endif // STEP_TIMING_INFO
+
+            // Run pressure check
+            double pressure_min = gpu_min_on_device<1024>(X.pressure_d, X.point_num * X.nv);
+            printf("\n min pressure : %g Pa\n", pressure_min);
+            if (pressure_min < pressure_check_limit) {
+                printf("\n WARNING: min pressure lower than min pressure limit: %g Pa\n",
+                       pressure_min);
+                if (exit_on_low_pressure_warning)
+                    break;
+            }
+            printf("--\n");
         }
+
 
         if (caught_signal != ESIG_NOSIG) {
             //exit loop and application after save on SIGTERM or SIGINT
             break;
         }
         n_since_output++;
+        // Marker to see to what step this output belongs
     }
     //
     //  Prints the duration of the integration.
     long finishTime = clock();
-    log::printf("\n\n Integration time = %f seconds\n\n",
-                double((finishTime - startTime)) / double(CLOCKS_PER_SEC));
+    log::printf("\n\n Integration time = %f seconds\n\n", elapsed_time);
+    // old method, just in case
+    // log::printf("\n\n Integration time = %f seconds\n\n", double((finishTime-startTime))/double(CLOCKS_PER_SEC));
 
     //
     //  Checks for errors in the device.
