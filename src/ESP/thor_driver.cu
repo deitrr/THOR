@@ -1304,5 +1304,8 @@ __host__ void ESP::Thor(const SimulationSetup& sim, kernel_diagnostics& diag) {
 
     if (phy_modules_execute)
         phy_modules_dyn_core_loop_end(*this);
+
+    globdiag(sim);
+    printf("global mass = %.16g\n", GlobalMass_h);
 }
 //END OF THOR!
