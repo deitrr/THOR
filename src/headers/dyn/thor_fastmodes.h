@@ -316,7 +316,7 @@ __global__ void Density_Pressure_Eqs(double *      pressure_d,
     double aux, r, p;
     double altht, althl;
     double Cv;
-    double dr2dz;
+    double r2dz;
 
 
     int ir = 0; // index in region
@@ -407,14 +407,14 @@ __global__ void Density_Pressure_Eqs(double *      pressure_d,
         r2m    = pow(alt + A, 2.0);
         r2l    = pow(althl + A, 2.0);
         rscale = A / (alt + A);
-        dr2dz  = (pow(altht + A, 3.0) - pow(althl + A, 3.0)) / 3.0;
+        r2dz   = (pow(altht + A, 3.0) - pow(althl + A, 3.0)) / 3.0;
     }
     else {
         r2p    = 1.0;
         r2m    = 1.0;
         r2l    = 1.0;
         rscale = 1.0;
-        dr2dz  = r2m * dz;
+        r2dz   = r2m * dz;
     }
 
     nflxr_s[iri]  = 0.0;
@@ -483,16 +483,15 @@ __global__ void Density_Pressure_Eqs(double *      pressure_d,
     // uses thomas algorithm computed vertical velocities in dyn/thor_vertical_int.h :: vertical_eq
     // wht/whl and wht/whl2 -> can have big error
 
-    dwdz   = (wht * r2p - whl * r2l) / (dr2dz);
-    dwptdz = (wht2 * pht * r2p - whl2 * phl * r2l) / (dz * r2m);
+    dwdz   = (wht * r2p - whl * r2l) / (r2dz);
+    dwptdz = (wht2 * pht * r2p - whl2 * phl * r2l) / (r2dz);
 
     // the errors can sometimes make aux become negative and cause issues later
     aux = -(nflxpt_s[iri] + dwptdz) * dt;               //advection terms in thermo eqn
     r   = Rhok_d[id * nv + lev] + Rho_d[id * nv + lev]; //density at time tau
 
-
     // Updates density
-    nflxr_s[iri] += dwdz; //hack to test mass conservation
+    nflxr_s[iri] += dwdz;
     Rho_d[id * nv + lev] +=
         (SlowRho_d[id * nv + lev] - nflxr_s[iri]) * dt; //density deviation at time tau+dtau
 
@@ -614,7 +613,7 @@ __global__ void Density_Pressure_Eqs_Poles(double *      pressure_d,
     double nflxr_p;
     double nflxpt_p;
 
-    double alt, r2p, r2m, r2l, rscale;
+    double alt, r2p, r2m, r2l, rscale, r2dz;
     double wht, whl;
     double wht2, whl2;
     double pht, phl;
@@ -675,17 +674,20 @@ __global__ void Density_Pressure_Eqs_Poles(double *      pressure_d,
 
             alt = Altitude_d[lev];
 
+            dz = altht - althl;
             if (DeepModel) {
                 r2p    = pow(altht + A, 2.0);
                 r2m    = pow(alt + A, 2.0);
                 r2l    = pow(althl + A, 2.0);
                 rscale = A / (alt + A);
+                r2dz   = (pow(altht + A, 3.0) - pow(althl + A, 3.0)) / 3.0;
             }
             else {
                 r2p    = 1.0;
                 r2m    = 1.0;
                 r2l    = 1.0;
                 rscale = 1.0;
+                r2dz   = r2m * dz;
             }
 
             nflxr_p  = 0.0;
@@ -725,9 +727,8 @@ __global__ void Density_Pressure_Eqs_Poles(double *      pressure_d,
                 }
             }
 
-            dz     = altht - althl;
-            dwdz   = (wht * r2p - whl * r2l) / (dz * r2m);
-            dwptdz = (wht2 * pht * r2p - whl2 * phl * r2l) / (dz * r2m);
+            dwdz   = (wht * r2p - whl * r2l) / (r2dz);
+            dwptdz = (wht2 * pht * r2p - whl2 * phl * r2l) / (r2dz);
 
             aux = -(nflxpt_p + dwptdz) * dt;                    //advection terms in thermo eqn
             r   = Rhok_d[id * nv + lev] + Rho_d[id * nv + lev]; //density at time tau

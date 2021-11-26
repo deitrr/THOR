@@ -175,11 +175,13 @@ __global__ void Vertical_Eq(double *      Whs_d,
                 GCoRu = Gravit * (Cp_d[id * nv + lev] - Rd_d[id * nv + lev]) / Rd_d[id * nv + lev];
             }
             if (DeepModel) {
-                double dzp  = 1.0 / (altht - alth);
-                double dzh  = 1.0 / (alt - altl);
-                double dzm  = 1.0 / (alth - althl);
-                double dzph = dzp * dzh;
-                double dzmh = dzm * dzh;
+                double dzp      = 1.0 / (altht - alth);
+                double dzh      = 1.0 / (alt - altl);
+                double dzm      = 1.0 / (alth - althl);
+                double dzph     = dzp * dzh;
+                double dzmh     = dzm * dzh;
+                double one_dV_p = 3.0 / (pow(altht + A, 3) - pow(alth + A, 3));
+                double one_dV_m = 3.0 / (pow(alth + A, 3) - pow(althl + A, 3));
 
                 hp   = hp * pow(altht + A, 2);
                 h    = h * pow(alth + A, 2);
@@ -205,14 +207,16 @@ __global__ void Vertical_Eq(double *      Whs_d,
                 CRdd = (CRddl * (alt - alth) + CRddu * (alth - altl)) / (alt - altl);
                 GCoR = (GCoRl * (alt - alth) + GCoRu * (alth - altl)) / (alt - altl);
 
-                cc[threadIdx.x * nvi + lev] = -dzph * or2 * hp - intt * (gp + GCoR - tor3 * hp);
+                cc[threadIdx.x * nvi + lev] = -dzph * or2 * hp - inttm * (gp + GCoR - tor3 * hp);
+                // cc[threadIdx.x * nvi + lev] =
+                //     -dzh * one_dV_p * hp +
 
                 if (NonHydro)
                     bb = CRdd + (dzph + dzmh) * or2 * h + (intl - inttm) * (g + GCoR - tor3 * h);
                 else
                     bb = (dzph + dzmh) * or2 * h + (intl - inttm) * (g + GCoR - tor3 * h);
 
-                aa = -dzmh * or2 * hm + intlm * (gm + GCoR - tor3 * hm);
+                aa = -dzmh * or2 * hm + intl * (gm + GCoR - tor3 * hm);
 
                 dSpdz = (Sp - Spl) * dzh;
                 dPdz  = (p - pl) * dzh;

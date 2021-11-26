@@ -469,14 +469,15 @@ __global__ void Compute_Advec_Cori2(double* Adv_d,       //
                 r2p = pow(altht + A, 2.0);
                 r2m = pow(alt + A, 2.0);
                 r2l = pow(althl + A, 2.0);
+                dz  = 3.0 / (pow(altht + A, 3.0) - pow(althl + A, 3.0));
             }
             else {
                 r2p = 1.0;
                 r2m = 1.0;
                 r2l = 1.0;
+                dz  = 1.0 / ((althl - altht) * r2m);
             }
 
-            dz   = 1.0 / ((althl - altht) * r2m);
             davx = (dvwxl * r2l - dvwxt * r2p) * dz;
             davy = (dvwyl * r2l - dvwyt * r2p) * dz;
             davz = (dvwzl * r2l - dvwzt * r2p) * dz;

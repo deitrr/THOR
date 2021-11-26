@@ -100,7 +100,7 @@ __global__ void Compute_Slow_Modes(double *SlowMh_d,
     double alt, altl;
     double r2p, r2m, r2l;
     double rscale;
-    double dr2dz;
+    double r2dz;
 
     double advr, advrl;
     double advx, advy, advz;
@@ -233,14 +233,14 @@ __global__ void Compute_Slow_Modes(double *SlowMh_d,
         r2m    = pow(alt + A, 2.0);
         r2l    = pow(althl + A, 2.0);
         rscale = A / (alt + A);
-        dr2dz  = (pow(altht + A, 3.0) - pow(althl + A, 3.0)) / 3;
+        r2dz   = (pow(altht + A, 3.0) - pow(althl + A, 3.0)) / 3;
     }
     else {
         r2p    = 1.0;
         r2m    = 1.0;
         r2l    = 1.0;
         rscale = 1.0;
-        dr2dz  = r2m * dz;
+        r2dz   = r2m * dz;
     }
 
     nflxr_s[iri] = 0.0;
@@ -291,8 +291,8 @@ __global__ void Compute_Slow_Modes(double *SlowMh_d,
         hht = hh_d[id * (nv + 1) + lev + 1];
     }
 
-    dwdz  = (wht * r2p - whl * r2l) / (dr2dz);
-    dwhdz = (wht * r2p * hht - whl * r2l * hhl) / (dz * r2m);
+    dwdz  = (wht * r2p - whl * r2l) / (r2dz);
+    dwhdz = (wht * r2p * hht - whl * r2l * hhl) / (r2dz);
 
     //Mh
     dpr =
@@ -346,7 +346,7 @@ __global__ void Compute_Slow_Modes(double *SlowMh_d,
     }
 
     // Rho
-    nflxr_s[iri] += dwdz; //hack to test mass conservation
+    nflxr_s[iri] += dwdz;
     SlowRho_d[id * nv + lev] = -nflxr_s[iri] + diffrh_d[id * nv + lev] + diffrv_d[id * nv + lev];
 
     // pressure
@@ -414,7 +414,7 @@ __global__ void Compute_Slow_Modes_Poles(double *SlowMh_d,
 
     double altht, althl;
     double alt, altl;
-    double r2p, r2m, r2l;
+    double r2p, r2m, r2l, r2dz;
     double rscale;
 
     double advrt, advrl;
@@ -515,17 +515,20 @@ __global__ void Compute_Slow_Modes_Poles(double *SlowMh_d,
                 }
             }
 
+            dz = altht - althl;
             if (DeepModel) {
                 r2p    = pow(altht + A, 2.0);
                 r2m    = pow(alt + A, 2.0);
                 r2l    = pow(althl + A, 2.0);
                 rscale = A / (alt + A);
+                r2dz   = (pow(altht + A, 3.0) - pow(althl + A, 3.0)) / 3;
             }
             else {
                 r2p    = 1.0;
                 r2m    = 1.0;
                 r2l    = 1.0;
                 rscale = 1.0;
+                r2dz   = r2m * dz;
             }
 
             nflxr_p = 0.0;
@@ -560,9 +563,8 @@ __global__ void Compute_Slow_Modes_Poles(double *SlowMh_d,
                 hht = hh_d[id * (nv + 1) + lev + 1];
             }
 
-            dz    = altht - althl;
-            dwdz  = (wht * r2p - whl * r2l) / (dz * r2m);
-            dwhdz = (wht * r2p * hht - whl * r2l * hhl) / (dz * r2m);
+            dwdz  = (wht * r2p - whl * r2l) / (r2dz);
+            dwhdz = (wht * r2p * hht - whl * r2l * hhl) / (r2dz);
 
             // Mh
             dpr = nflxv_p[0] * func_r_p[0] + nflxv_p[1] * func_r_p[1] + nflxv_p[2] * func_r_p[2];
