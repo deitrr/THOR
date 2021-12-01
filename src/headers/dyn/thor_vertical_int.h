@@ -111,7 +111,7 @@ __global__ void Vertical_Eq(double *      Whs_d,
     double alt, altl;
     double Sp, Spl, p, pl, r, rl;
     double Sdl, Sd, Sdh;
-    double hp, h, hm;
+    double hp, h, hm, r2p, r2, r2m;
     double gp, g, gm;
     double whl, wht;
     double GCoRl, GCoRu, GCoR;
@@ -175,17 +175,28 @@ __global__ void Vertical_Eq(double *      Whs_d,
                 GCoRu = Gravit * (Cp_d[id * nv + lev] - Rd_d[id * nv + lev]) / Rd_d[id * nv + lev];
             }
             if (DeepModel) {
-                double dzp      = 1.0 / (altht - alth);
-                double dzh      = 1.0 / (alt - altl);
-                double dzm      = 1.0 / (alth - althl);
-                double dzph     = dzp * dzh;
-                double dzmh     = dzm * dzh;
-                double one_dV_p = 3.0 / (pow(altht + A, 3) - pow(alth + A, 3));
-                double one_dV_m = 3.0 / (pow(alth + A, 3) - pow(althl + A, 3));
+                double dzp  = 1.0 / (altht - alth);
+                double dzh  = 1.0 / (alt - altl);
+                double dzm  = 1.0 / (alth - althl);
+                double dzph = dzp * dzh;
+                double dzmh = dzm * dzh;
 
-                hp   = hp * pow(altht + A, 2);
-                h    = h * pow(alth + A, 2);
-                hm   = hm * pow(althl + A, 2);
+                double one_dr   = 1.0 / (alt - altl);   //diff b/w cell centers
+                double one_dr_t = 1.0 / (altht - alth); //width of top layer
+                double one_dr_l = 1.0 / (alth - althl); //width of lower layer
+
+                double one_dV_t =
+                    3.0 / (pow(altht + A, 3) - pow(alth + A, 3)); //vol element of top layer
+                double one_dV_l =
+                    3.0 / (pow(alth + A, 3) - pow(althl + A, 3)); //vol element of lower layer
+
+                r2p = pow(alth + A, 2);
+                r2  = pow(alt + A, 2);
+                r2m = pow(altl + A, 2);
+                hp  = hp * r2p; // enthalpy * r^2 for top interface
+                h   = h * r2;   // enthalpy * r^2 for middle interface
+                hm  = hm * r2m; // enthalpy * r^2 for lower interface
+
                 or2  = 1 / pow(alth + A, 2);
                 tor3 = 2 / pow(alth + A, 3);
 
@@ -200,37 +211,66 @@ __global__ void Vertical_Eq(double *      Whs_d,
                 xim = althl;
                 xip = alth;
 
+                // compute coefficients aa, bb, cc of thomas algorithm original matrix
                 inttm = -(xi - xip) * dzm * dzh;
                 intlm = (xi - xim) * dzm * dzh;
 
-                // get g*Cv/Rd and Cv/Rd/dt^2 at the current interface
-                CRdd = (CRddl * (alt - alth) + CRddu * (alth - altl)) / (alt - altl);
-                GCoR = (GCoRl * (alt - alth) + GCoRu * (alth - altl)) / (alt - altl);
+                double c_int = (alth - altl) * one_dr;
+                double a_int = (alt - alth) * one_dr;
 
-                cc[threadIdx.x * nvi + lev] = -dzph * or2 * hp - inttm * (gp + GCoR - tor3 * hp);
+                // get g*Cv/Rd at the current interface
+                CRdd = (CRddl * a_int + CRddu * c_int);
+                GCoR = (GCoRl * a_int + GCoRu * c_int);
+                // CRdd = (CRddl * (alt - alth) + CRddu * (alth - altl)) / (alt - altl);
+                // GCoR = (GCoRl * (alt - alth) + GCoRu * (alth - altl)) / (alt - altl);
+
+                cc[threadIdx.x * nvi + lev] =
+                    -hp * one_dr * one_dV_t //-dzph * or2 * hp + inttm * tor3 * hp
+                    - c_int * (gp * one_dr_t + GCoRu * r2p * one_dV_t); // - inttm * (gp + GCoR);
                 // cc[threadIdx.x * nvi + lev] =
-                //     -dzh * one_dV_p * hp +
+                // -hp * one_dr * one_dV_t - c_int * (gp * one_dr_t + GCoRu * r2p * one_dV_t);
 
                 if (NonHydro)
-                    bb = CRdd + (dzph + dzmh) * or2 * h + (intl - inttm) * (g + GCoR - tor3 * h);
+                    bb = CRdd
+                         + (one_dV_t + one_dV_l) * one_dr
+                               * h //+ (dzph + dzmh) * or2 * h - (intl - inttm) * tor3 * h
+                         + (c_int - a_int)
+                               * ((one_dr_t - one_dr_l) * g
+                                  + (one_dV_t * GCoRu - one_dV_l * GCoRl)
+                                        * r2); //   + (intl - inttm) * (g + GCoR);
+                // bb = CRdd + (one_dV_t + one_dV_l) * h
+                //      + (c_int - a_int)
+                //            * ((one_dr_t - one_dr_l) * g
+                //               + (one_dV_t * GCoRu - one_dV_l * GCoRl) * r2);
                 else
-                    bb = (dzph + dzmh) * or2 * h + (intl - inttm) * (g + GCoR - tor3 * h);
+                    bb = (one_dV_t + one_dV_l) * one_dr * h
+                         + (c_int - a_int)
+                               * ((one_dr_t - one_dr_l) * g
+                                  + (one_dV_t * GCoRu - one_dV_l * GCoRl) * r2);
 
-                aa = -dzmh * or2 * hm + intl * (gm + GCoR - tor3 * hm);
+                aa = -hm * one_dr * one_dV_l //-dzmh * or2 * hm - intlm * tor3 * hm
+                     + a_int * (gm * one_dr_l + GCoRl * r2m * one_dV_l); //+ intlm * (gm + GCoR);
+                // aa = -hm * one_dr * one_dV_l + a_int * (gm * one_dr_l + GCoRl * r2m * one_dV_l);
 
-                dSpdz = (Sp - Spl) * dzh;
-                dPdz  = (p - pl) * dzh;
+                dSpdz = (Sp - Spl) * one_dr;
+                dPdz  = (p - pl) * one_dr;
+                rhohs = rl * a_int + r * c_int;
+                Sdh   = Sdl * a_int + Sd * c_int;
 
-                xi  = alth;
-                xim = altl;
-                xip = alt;
+                // dSpdz = (Sp - Spl) * dzh;
+                // dPdz  = (p - pl) * dzh;
+                //
+                // xi  = alth;
+                // xim = altl;
+                // xip = alt;
+                //
+                // intt = (xi - xip) / (xim - xip);
+                // intl = (xi - xim) / (xip - xim);
+                //
+                // rhohs = rl * intt + r * intl;
+                // Sdh   = Sdl * intt + Sd * intl;
 
-                intt = (xi - xip) / (xim - xip);
-                intl = (xi - xim) / (xip - xim);
-
-                rhohs = rl * intt + r * intl;
-                Sdh   = Sdl * intt + Sd * intl;
-
+                //need to check locations of gravity in full g mode below
                 if (!NonHydro) {
                     C0 =
                         (pow(deltat, 2.0) * dSpdz + pow(deltat, 2.0) * Gravit * Sdh
@@ -243,6 +283,18 @@ __global__ void Vertical_Eq(double *      Whs_d,
                           + deltat * dPdz - deltat * Srh_d[id * nvi + lev])
                          * (CRdd);
                 }
+                // if (id == 0) {
+                //     printf("%d, %f,  %#.15g, %#.15g, %#.15g, %#.15g, %#.15g, %#.15g, %#.15g\n",
+                //            lev,
+                //            deltat,
+                //            Whs_d[id * nvi + lev] / deltat,
+                //            Srh_d[id * nvi + lev],
+                //            dPdz,
+                //            Gravit * rhohs,
+                //            pow(deltat, 1.0) * dSpdz,
+                //            pow(deltat, 1.0) * Gravit * Sdh,
+                //            C0 / CRdd / deltat);
+                // }
 
                 if (lev < nv - 1) { // Fetch the data for next layer
                     althl = alth;

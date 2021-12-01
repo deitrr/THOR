@@ -343,6 +343,18 @@ __global__ void Compute_Slow_Modes(double *SlowMh_d,
         swr -= profx_dWh_d[id * (nv + 1) + lev];
 
         SlowWh_d[id * (nv + 1) + lev] = -swr;
+        // if (id == 0) {
+        //     printf("%d, %#.15g, %#.15g, %#.15g, %#.15g, %#.15g, %#.15g, %#.15g\n ",
+        //            lev,
+        //            -dpdz,
+        //            -Gravit * (rhol * intt + rho * intl),
+        //            -dpdz - Gravit * (rhol * intt + rho * intl),
+        //            advrl * intt + advr * intl,
+        //            (-diffw_d[id * nv + lev - 1] - diffwv_d[id * nv + lev - 1]) * intt
+        //                + (-diffw_d[id * nv + lev] - diffwv_d[id * nv + lev]) * intl,
+        //            profx_dWh_d[id * (nv + 1) + lev],
+        //            SlowWh_d[id * (nv + 1) + lev]);
+        // }
     }
 
     // Rho
