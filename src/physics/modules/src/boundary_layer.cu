@@ -923,14 +923,14 @@ __global__ void CalcGradRi(double *pressure_d,
             //asymptotic length scale (constant in BL, decays to lower constant in free atmosphere)
             if ((Altitudeh_d[lev] <= asl_transition_height) || (asl_transition_height < 0)) {
                 asym_len_scale_m = abl_asym_len;
-                asym_len_scale_h = 3 * abl_asym_len;
+                asym_len_scale_h = abl_asym_len;
             }
             else {
                 asym_len_scale_m = free_asym_len
                                    + (abl_asym_len - free_asym_len)
                                          * exp(1 - Altitudeh_d[lev] / asl_transition_height);
                 asym_len_scale_h = free_asym_len
-                                   + (3 * abl_asym_len - free_asym_len)
+                                   + (abl_asym_len - free_asym_len)
                                          * exp(1 - Altitudeh_d[lev] / asl_transition_height);
             }
             mix_length_m = pow(1.0 / KVONKARMAN / Altitudeh_d[lev] + 1.0 / asym_len_scale_m, -1.0);

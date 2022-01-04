@@ -842,7 +842,7 @@ def regrid(resultsf, simID, ntsi, nts, pgrid_ref='auto', overwrite=False, comp=4
             if input.surface:
                 surf = 1
                 extrap_low = (grid.Altitudeh[0] - grid.Altitude[1]) / (grid.Altitude[0] - grid.Altitude[1])
-            
+
         else:
             surf = 0
 
@@ -1988,6 +1988,7 @@ def streamf_moc_plot(input, grid, output, rg, sigmaref, save=True, axis=False,
             levp = np.arange(np.ceil(np.nanmin(sf[:, prange[0]])/(10**cscale) / csp) * csp, (np.floor(np.nanmax(sf[:, prange[0]])/(10**cscale) / csp)+1) * csp, csp)
 
     c2 = ax.contour(rg.Latitude[:], rg.Pressure[:] / 1e5, sf.T/(10**cscale), levels=levp, colors=cover_color, linewidths=1)
+    print(np.nanmax(np.abs(sf)))
     ax.clabel(c2, inline=True, fontsize=6, fmt='%#.1f', use_clabeltext=True)
 
     if cbar:
