@@ -3,7 +3,7 @@
 
 # ---- code by Urs Schroffenegger ----------------------------------------------
 
-"""Tool to rerun THOR on a folder and execute a small amount of postprocessing steps. 
+"""Tool to rerun THOR on a folder and execute a small amount of postprocessing steps.
 
 Can rerun postprocessing steps configured by options:
 * change resolution by using other opacities, spectrum and cloud files
@@ -24,6 +24,7 @@ import subprocess
 import sys
 import shutil
 
+from extrap_top_pressure import extrap_top_pressure
 
 def search_folder_for_pattern(folder, pattern):
     """Get a list of filenames and regex groups for filename matching pattern in folder."""
@@ -90,9 +91,23 @@ parser.add_argument('-c', '--numcol',
                     action='store',
                     help="number of parallel columns to run")
 
-args = parser.parse_args()
+parser.add_argument("-xp", "--extrap2press",
+                    nargs=1,
+                    default=[False],
+                    help='extrapolate top boundary to this pressure (bar)')
 
+args = parser.parse_args()
 base_folder = pathlib.Path(args.data_folder).resolve()
+
+#handle extrap2press argument (allows extending the top boundary for spectra)
+if args.extrap2press[0] == False:
+    x2p = False
+else:
+    try:
+        x2p = float(args.extrap2press[0])
+    except:
+        print(f"extrap2press argument must be a scalar float")
+        exit(-1)
 
 # search for last output file number
 # get output write log
@@ -102,7 +117,7 @@ esp_write_log_list = search_folder_for_pattern(
 if len(esp_write_log_list) == 0:
     print(f"Could not find output write log in folder {base_folder}")
     exit(-1)
-elif len(esp_write_log_list) > 1: 
+elif len(esp_write_log_list) > 1:
     print(f"Found more than one output write log in folder {base_folder}: {esp_write_log_list}")
     exit(-1)
 else:
@@ -116,7 +131,30 @@ with (base_folder / esp_write_log).open("r") as f:
 
 print(f"Last output file {f_name} with index {f_index} at {steps} steps")
 
-    
+#search for grid and planet file (need grid values for extrapolation of top boundary)
+if x2p:
+    grid_file_list = search_folder_for_pattern(base_folder,r"^esp_output_grid_.*\.h5")
+    if len(grid_file_list) == 0:
+        print(f"Could not find grid h5 file in folder {base_folder}")
+        exit(-1)
+    elif len(esp_write_log_list) > 1:
+        print(f"Found more than one grid h5 file in folder {base_folder}: {grid_file_list}")
+        exit(-1)
+    else:
+        print(f"Found grid h5 file: {grid_file_list[0][0]}")
+        grid_file = grid_file_list[0][0]
+
+    planet_file_list = search_folder_for_pattern(base_folder,r"^esp_output_planet_.*\.h5")
+    if len(planet_file_list) == 0:
+        print(f"Could not find planet h5 file in folder {base_folder}")
+        exit(-1)
+    elif len(esp_write_log_list) > 1:
+        print(f"Found more than one planet h5 file in folder {base_folder}: {planet_file_list}")
+        exit(-1)
+    else:
+        print(f"Found planet h5 file: {planet_file_list[0][0]}")
+        planet_file = planet_file_list[0][0]
+
 # search for last config file
 all_config_copys = search_folder_for_pattern(base_folder, r"^config_copy\.(\d+)$")
 
@@ -139,6 +177,10 @@ print(f"Running for {number_of_steps_to_add} step up to {int(steps) + number_of_
 
 regex_list.append((re.compile("^num_steps\s*=\s*(\d+)\s*", flags=re.MULTILINE), f"num_steps = {int(steps) + number_of_steps_to_add} "))
 regex_list.append((re.compile("^n_out\s*=\s*(\d+)\s*", flags=re.MULTILINE), f"n_out = 1 "))
+#make sure the gcm is off to avoid complications...
+regex_list.append((re.compile("^gcm_off\s*=\s*((false)|(true))\s*", flags=re.MULTILINE), f"gcm_off = true "))
+#ditto for convective adjustment...
+regex_list.append((re.compile("^conv_adj\s*=\s*((false)|(true))\s*", flags=re.MULTILINE), f"conv_adj = false "))
 
 if args.opacities:
     print("Storing w0 and g0 per band")
@@ -154,7 +196,7 @@ if args.noplanck:
 
 if args.noscattering:
     regex_list.append((re.compile("^Alf_scat\s*=\s*((false)|(true))\s*", flags=re.MULTILINE), f"Alf_scat = false "))
-    
+
 if args.hires:
     print("Running hires output")
     (opacity_filename, spectrum_filename, clouds_filename) = args.hiresfiles.split(",")
@@ -173,6 +215,17 @@ if args.postfix is not None:
     postfix = args.postfix
 else:
     postfix = time_suffix
+
+continue_from = base_folder / f_name
+if x2p:
+    print(f"Extrapolating top boundary to pressure: {x2p} bar")
+    #do stuff we need to do to set up extrapolated input file
+
+    a, b = extrap_top_pressure(continue_from, base_folder / grid_file, base_folder / planet_file, x2p)
+    #don't forget to modify config file via regex list to use rest = false etc.
+    # regex_list.append((re.compile("^rest\s*=\s*((false)|(true))\s*", flags=re.MULTILINE), f"rest = false ")) #maybe i don't need this???
+    # regex_list.append((re.compile("initial\s*=\s*(.*)\s*", flags=re.MULTILINE), f"initial = {initial_h5_filename}"))
+
 
 with (base_folder / last_config_copy).open("r") as f:
     # read in the config
@@ -194,15 +247,14 @@ with (base_folder / last_config_copy).open("r") as f:
 
     # print(config)
 
-    
     post_processing_config = base_folder / f"config_postprocessing_{postfix}.thr"
     with post_processing_config.open("w") as w:
         w.write(config)
-        
 
+import pdb; pdb.set_trace()
 
 # Run thor on this config, wheeeeEEEEEEEEEEEE!
-continue_from = base_folder / f_name
+
 output_dir = base_folder / f"results_postprocessing_{postfix}"
 
 esp_cmd = "./bin/esp"
@@ -216,23 +268,23 @@ result = subprocess.run([esp_cmd] + esp_args,
 if result.returncode != 0:
     print(f"Thor run returned bad exit code {result.returncode}")
     exit(-1)
-    
-    
+
+
 # copy over grind and planet file
 planet_files = search_folder_for_pattern(base_folder, r"^esp_output_planet_(.+).h5$")
 if len(planet_files) == 1:
     # copy file over
-    
+
     shutil.copy2(base_folder / planet_files[0][0], output_dir)
 else:
     print(f"Found wrong number of planet file")
     for f, g in planet_files:
         print(f"\t[{f}]")
-        
+
 grid_files = search_folder_for_pattern(base_folder, r"^esp_output_grid_(.+).h5$")
 if len(grid_files) == 1:
     # copy file over
-    
+
     shutil.copy2(base_folder / grid_files[0][0], output_dir)
 else:
     print(f"Found wrong number of grid file")
