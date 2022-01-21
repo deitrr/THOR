@@ -96,6 +96,16 @@ parser.add_argument("-xp", "--extrap2press",
                     default=[False],
                     help='extrapolate top boundary to this pressure (bar)')
 
+parser.add_argument('-cf', '--contr_func',
+                    default=False,
+                    action='store_true',
+                    help="output contribution function")
+
+parser.add_argument('-w', '--overwrite',
+                    default=False,
+                    action='store_true',
+                    help="overwrite existing postprocessing output")
+
 args = parser.parse_args()
 base_folder = pathlib.Path(args.data_folder).resolve()
 
@@ -159,7 +169,7 @@ if x2p:
 all_config_copys = search_folder_for_pattern(base_folder, r"^config_copy\.(\d+)$")
 
 # get last config copy
-last_config_copy = sorted( all_config_copys, key=lambda x : x[1][0])[-1][0]
+last_config_copy = sorted( all_config_copys, key=lambda x : int(x[1][0]))[-1][0]
 
 print(f"Found {len(all_config_copys)} configuration file copies, using last: {last_config_copy}")
 
@@ -216,15 +226,24 @@ if args.postfix is not None:
 else:
     postfix = time_suffix
 
+if args.contr_func:
+    regex_list.append((re.compile("^Alf_store_contr_func\s*=\s*((false)|(true))\s*", flags=re.MULTILINE), f"Alf_store_contr_func = true "))
+
+
 continue_from = base_folder / f_name
 if x2p:
     print(f"Extrapolating top boundary to pressure: {x2p} bar")
     #do stuff we need to do to set up extrapolated input file
 
-    a, b = extrap_top_pressure(continue_from, base_folder / grid_file, base_folder / planet_file, x2p)
+    continue_from, nv_new, top_altitude_new = \
+            extrap_top_pressure(base_folder, f_name, grid_file, planet_file, x2p)
+
     #don't forget to modify config file via regex list to use rest = false etc.
     # regex_list.append((re.compile("^rest\s*=\s*((false)|(true))\s*", flags=re.MULTILINE), f"rest = false ")) #maybe i don't need this???
     # regex_list.append((re.compile("initial\s*=\s*(.*)\s*", flags=re.MULTILINE), f"initial = {initial_h5_filename}"))
+
+    regex_list.append((re.compile("^vlevel\s*=\s*(\d+)\s*", flags=re.MULTILINE), f"vlevel = {nv_new} "))
+    regex_list.append((re.compile("^Top_altitude\s*=\s*(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\s*", flags=re.MULTILINE), f"Top_altitude = {top_altitude_new} "))
 
 
 with (base_folder / last_config_copy).open("r") as f:
@@ -251,14 +270,13 @@ with (base_folder / last_config_copy).open("r") as f:
     with post_processing_config.open("w") as w:
         w.write(config)
 
-import pdb; pdb.set_trace()
-
 # Run thor on this config, wheeeeEEEEEEEEEEEE!
-
 output_dir = base_folder / f"results_postprocessing_{postfix}"
 
 esp_cmd = "./bin/esp"
 esp_args = ["-c", f"{continue_from}", "-o", f"{output_dir}", f"{post_processing_config}"]
+if args.overwrite:
+    esp_args.append("-w")
 print(f"Running thor with:\n\t{' '.join([esp_cmd] + esp_args)}")
 result = subprocess.run([esp_cmd] + esp_args,
                         stdout=sys.stdout,
@@ -270,22 +288,28 @@ if result.returncode != 0:
     exit(-1)
 
 
-# copy over grind and planet file
-planet_files = search_folder_for_pattern(base_folder, r"^esp_output_planet_(.+).h5$")
+# copy over grid and planet file
+if x2p:
+    search_folder = base_folder / "extrap_top_init"
+else:
+    search_folder = base_folder
+
+
+planet_files = search_folder_for_pattern(search_folder, r"^esp_output_planet_(.+).h5$")
 if len(planet_files) == 1:
     # copy file over
 
-    shutil.copy2(base_folder / planet_files[0][0], output_dir)
+    shutil.copy2(search_folder / planet_files[0][0], output_dir)
 else:
     print(f"Found wrong number of planet file")
     for f, g in planet_files:
         print(f"\t[{f}]")
 
-grid_files = search_folder_for_pattern(base_folder, r"^esp_output_grid_(.+).h5$")
+grid_files = search_folder_for_pattern(search_folder, r"^esp_output_grid_(.+).h5$")
 if len(grid_files) == 1:
     # copy file over
 
-    shutil.copy2(base_folder / grid_files[0][0], output_dir)
+    shutil.copy2(search_folder / grid_files[0][0], output_dir)
 else:
     print(f"Found wrong number of grid file")
     for f, g in grid_files:
