@@ -351,6 +351,8 @@ __host__ void ESP::Thor(const SimulationSetup& sim, kernel_diagnostics& diag) {
                                                    sim.HyDiffOrder);
                 cudaDeviceSynchronize();
                 stepnum += 1;
+
+                BENCH_POINT_I_S(current_step, rk, "Diffusion_Op1_mid", (), ("diff_d"))
             }
 
             BENCH_POINT_I_S(current_step, rk, "Diffusion_Op1", (), ("diff_d"))

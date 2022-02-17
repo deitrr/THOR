@@ -304,7 +304,7 @@ __global__ void Diffusion_Op(double* diffmh_d,
         rscale = 1.0;
 
     if (laststep) {
-        sdiff = -K_d[lev] * pow(-1.0, HyDiffOrder / 2);
+        sdiff = -K_d[lev] * pow(-1.0, 4 / 2);
     }
 
     lap = 0.0;
