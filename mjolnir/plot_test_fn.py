@@ -257,7 +257,7 @@ args = mph.mjol_args(sim_path.__str__())
 args.initial_file = [1]
 args.last_file = [1]
 args.horizontal_lev = [100]
-args.pview = ['uver','Tver','Tulev','TSfluxprof','TSfdirprof','TSqheatprof','qheatprof']
+args.pview = ['uver','Tver','Tulev','TSfluxprof','TSfdirprof','TSqheatprof','qheatprof','TP']
 plots = mph.make_plot(args)
 for p in plots:   # move to destination folder for easy viewing
     moveit(p,prefix,fig_destination)
