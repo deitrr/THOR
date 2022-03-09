@@ -1045,7 +1045,7 @@ def regrid(resultsf, simID, ntsi, nts, pgrid_ref='auto', overwrite=False, comp=4
             # need to make sure the arrays are contiguous
             x = np.ascontiguousarray(interm['Pressure'][:, :, ::-1].ravel())
             xnew = np.ascontiguousarray(Pref[::-1])
-            
+
             for key in dest.keys():
                 if np.shape(interm[key]) == (d_lon[0], d_lon[1]):
                     # 2D field (e.g., insolation)
@@ -1841,7 +1841,7 @@ def horizontal_lev(input, grid, output, rg, Plev, z, save=True, axis=False,
         if z['llswap']:
             q = ax.quiver(latq, lonq, V, U, color=wind_color,scale=10*umax)
         else:
-            q = ax.quiver(lonq, latq, U, V, color=wind_color,scale=10*umax)
+            q = ax.quiver(lonq, latq, U, V, color=wind_color,scale=10*umax,width=0.005)
         if wind_key_loc:
             ax.quiverkey(q, X=wind_key_loc[0], Y=wind_key_loc[1], U=umax, label='%#.2f m/s' % umax, labelpos='E')
 
@@ -1991,8 +1991,8 @@ def streamf_moc_plot(input, grid, output, rg, sigmaref, save=True, axis=False,
         else:
             levp = np.arange(np.ceil(np.nanmin(sf[:, prange[0]])/(10**cscale) / csp) * csp, (np.floor(np.nanmax(sf[:, prange[0]])/(10**cscale) / csp)+1) * csp, csp)
 
-    c2 = ax.contour(rg.Latitude[:], rg.Pressure[:] / 1e5, sf.T/(10**cscale), levels=levp, colors=cover_color, linewidths=1)
-    ax.clabel(c2, inline=True, fontsize=6, fmt='%#.1f', use_clabeltext=True)
+    c2 = ax.contour(rg.Latitude[:], rg.Pressure[:] / 1e5, sf.T/(10**cscale), levels=levp, colors=cover_color, linewidths=1.5)
+    ax.clabel(c2, inline=True, fontsize=8, fmt='%#.1f', use_clabeltext=True)
 
     if cbar:
         divider = make_axes_locatable(ax)
