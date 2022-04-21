@@ -1534,3 +1534,33 @@ void bottum_up_adiabat_correction(int id,
         }
     }
 }
+
+
+void camembert_k2_18_IC_arrays(double *P_IC_h, double *T_IC_h) {
+  std::string k2_18_filename("tools/CAMEMBERT_K2-18b_IC.dat");
+  FILE * infile;
+  int Nrows = 70;
+  double dummy;
+
+  infile = fopen(k2_18_filename.c_str(),"r");
+
+  for (int i = 0; i < 6; i++) {
+    //skip the first six lines
+    fscanf(infile,"%*[^\n]\n");
+  }
+  for (int j = 0; j < Nrows; j++){
+    fscanf(infile,
+           "%lf %lf %lf %lf %lf %lf",
+           &P_IC_h[j],
+           &T_IC_h[j],
+           &dummy,
+           &dummy,
+           &dummy,
+           &dummy);
+  }
+  fclose(infile);
+
+  for (int j = 0; j < Nrows; j++){
+    printf("%g %g \n",P_IC_h[j],T_IC_h[j]);
+  }
+}

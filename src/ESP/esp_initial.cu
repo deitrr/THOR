@@ -332,6 +332,11 @@ __host__ void ESP::alloc_data(bool globdiag,
         cudaMalloc((void **)&Rho_profx_d, nv * point_num * sizeof(double));
     }
 
+    if (core_benchmark == K2_18b_TF ){
+      const int n_pressures = 70;
+      P_IC_h = (double *)malloc(n_pressures * sizeof(double));
+      T_IC_h = (double *)malloc(n_pressures * sizeof(double));
+    }
     // ultra hot
     cudaMalloc((void **)&Rd_d, nv * point_num * sizeof(double));
     cudaMalloc((void **)&Cp_d, nv * point_num * sizeof(double));
@@ -500,6 +505,9 @@ __host__ bool ESP::initial_values(const std::string &initial_conditions_filename
 
     double Rd_L, P_L, T_L, rho_L, alpha, r_int, l_int, g_L, g;
     if (sim.rest) {
+        if (core_benchmark == K2_18b_TF){
+          camembert_k2_18_IC_arrays(P_IC_h, T_IC_h);
+        }
         for (int i = 0; i < 1; i++) {
             //
             //          Initial conditions for an isothermal Atmosphere
@@ -525,7 +533,7 @@ __host__ bool ESP::initial_values(const std::string &initial_conditions_filename
                         rho_L = sim.P_Ref / (sim.Rd * sim.Tmean);
                         T_L   = sim.Tmean;
                         dz    = Altitude_h[0];
-			if (sim.GravHeightVar) {
+			     if (sim.GravHeightVar) {
                             g_L = sim.Gravit * pow(sim.A / (sim.A + Altitude_h[0]), 2);
                         }
                         else {

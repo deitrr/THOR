@@ -155,6 +155,10 @@ public:
     double f_lw;     //fraction of lw optical depth due to well-mixed absorbers
     double bv_freq;  //for constbv profile, brunt-vaisala frequency
 
+    //arrays for read in IC profiles
+    double *T_IC_h;
+    double *P_IC_h;
+
     bool check_h;
 
     // sponge layer settings and variables

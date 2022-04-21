@@ -647,6 +647,14 @@ int main(int argc, char** argv) {
         core_benchmark = GWAVE_TEST;
         config_OK &= true;
     }
+    else if (core_benchmark_str == "K2_18b_TF") {
+        core_benchmark = K2_18b_TF;
+        config_OK &= true;
+    }
+    else if (core_benchmark_str == "GJ1214b_TF") {
+        core_benchmark = GJ1214b_TF;
+        config_OK &= true;
+    }
     else {
         log::printf("core_benchmark config item not recognised: [%s]\n",
                     core_benchmark_str.c_str());
