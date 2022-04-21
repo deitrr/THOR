@@ -1550,9 +1550,10 @@ void camembert_k2_18_IC_arrays(double *P_IC_h, double *T_IC_h) {
   }
   for (int j = 0; j < Nrows; j++){
     fscanf(infile,
-           "%lf %lf %lf %lf %lf %lf",
+           "%lf %lf %lf %lf %lf %lf %lf",
            &P_IC_h[j],
            &T_IC_h[j],
+           &dummy,
            &dummy,
            &dummy,
            &dummy,
