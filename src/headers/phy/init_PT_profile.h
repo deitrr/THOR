@@ -1567,15 +1567,24 @@ void camembert_k2_18_IC_arrays(double *P_IC_h, double *T_IC_h, int n_pressures) 
 }
 
 double camember_k2_18b_interp(double P, double *P_IC_h, double *T_IC_h, int n_pressures) {
-  double T;
+  double T = 0;
+  int i_lower = -1;
   //interpolation here!
   //first search for nearest pressures in P_IC_h
   if (P <= P_IC_h[0]) {
     T = T_IC_h[0]; //padding sides with isotherms
   } else if (P >= P_IC_h[n_pressures - 1]) {
     T = T_IC_h[n_pressures - 1]; //padding sides with isotherms
+  } else {
+    for (int i; i < n_pressures - 1; i++) {
+      if (P >= P_IC_h[i] && P < P_IC_h[i+1]){
+        i_lower = i;
+        break;
+      }
+    }
+    T = T_IC_h[i_lower] + (P - P_IC_h[i_lower]) *
+          (T_IC_h[i_lower+1] - T_IC_h[i_lower]) /
+          (P_IC_h[i_lower+1] - P_IC_h[i_lower]);
   }
-
-
   return T;
 }
