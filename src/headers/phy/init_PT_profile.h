@@ -1536,7 +1536,7 @@ void bottum_up_adiabat_correction(int id,
 }
 
 
-void camembert_k2_18_IC_arrays(double *P_IC_h, double *T_IC_h) {
+void camembert_k2_18_IC_arrays(double *P_IC_h, double *T_IC_h, int n_pressures) {
   std::string k2_18_filename("tools/CAMEMBERT_K2-18b_IC.dat");
   FILE * infile;
   int Nrows = 70;
@@ -1561,7 +1561,21 @@ void camembert_k2_18_IC_arrays(double *P_IC_h, double *T_IC_h) {
   }
   fclose(infile);
 
-  for (int j = 0; j < Nrows; j++){
-    printf("%g %g \n",P_IC_h[j],T_IC_h[j]);
+  // for (int j = 0; j < Nrows; j++){
+  //   printf("%g %g \n",P_IC_h[j],T_IC_h[j]);
+  // }
+}
+
+double camember_k2_18b_interp(double P, double *P_IC_h, double *T_IC_h, int n_pressures) {
+  double T;
+  //interpolation here!
+  //first search for nearest pressures in P_IC_h
+  if (P <= P_IC_h[0]) {
+    T = T_IC_h[0]; //padding sides with isotherms
+  } else if (P >= P_IC_h[n_pressures - 1]) {
+    T = T_IC_h[n_pressures - 1]; //padding sides with isotherms
   }
+
+
+  return T;
 }

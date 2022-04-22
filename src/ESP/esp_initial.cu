@@ -333,7 +333,6 @@ __host__ void ESP::alloc_data(bool globdiag,
     }
 
     if (core_benchmark == K2_18b_TF ){
-      const int n_pressures = 70;
       P_IC_h = (double *)malloc(n_pressures * sizeof(double));
       T_IC_h = (double *)malloc(n_pressures * sizeof(double));
     }
@@ -506,7 +505,7 @@ __host__ bool ESP::initial_values(const std::string &initial_conditions_filename
     double Rd_L, P_L, T_L, rho_L, alpha, r_int, l_int, g_L, g;
     if (sim.rest) {
         if (core_benchmark == K2_18b_TF){
-          camembert_k2_18_IC_arrays(P_IC_h, T_IC_h);
+          camembert_k2_18_IC_arrays(P_IC_h, T_IC_h, n_pressures);
         }
         for (int i = 0; i < 1; i++) {
             //
@@ -874,7 +873,12 @@ __host__ bool ESP::initial_values(const std::string &initial_conditions_filename
                             temperature_h[i * nv + lev] = sim.Tmean;
                         }
                         else {
-                            temperature_h[i * nv + lev] = guillot_T(sim.P_Ref,
+                            if (core_benchmark == K2_18b_TF){
+                              temperature_h[i * nv + lev] = camembert_k2_18b_interp(sim.P_Ref,
+                                                                                    P_IC_h,
+                                                                                    T_IC_h, n_pressures);
+                            } else {
+                              temperature_h[i * nv + lev] = guillot_T(sim.P_Ref,
                                                                     mu,
                                                                     sim.Tmean,
                                                                     sim.P_Ref,
@@ -883,6 +887,7 @@ __host__ bool ESP::initial_values(const std::string &initial_conditions_filename
                                                                     f_lw,
                                                                     kappa_sw,
                                                                     kappa_lw);
+                            }
                         }
                         if (ultrahot_thermo != NO_UH_THERMO) {
                             chi_H = chi_H_equilibrium(
@@ -958,6 +963,12 @@ __host__ bool ESP::initial_values(const std::string &initial_conditions_filename
                             temperature_h[i * nv + lev] = sim.Tmean;
                         }
                         else {
+                          if (core_benchmark == K2_18b_TF){
+                            temperature_h[i * nv + lev] = camembert_k2_18b_interp(pressure_h[i * nv + lev],
+                                                                                  P_IC_h,
+                                                                                  T_IC_h,
+                                                                                  n_pressures);
+                          } else {
                             temperature_h[i * nv + lev] = guillot_T(pressure_h[i * nv + lev],
                                                                     mu,
                                                                     sim.Tmean,
@@ -967,6 +978,7 @@ __host__ bool ESP::initial_values(const std::string &initial_conditions_filename
                                                                     f_lw,
                                                                     kappa_sw,
                                                                     kappa_lw);
+                          }
                         }
                         if (ultrahot_thermo != NO_UH_THERMO) {
                             chi_H              = chi_H_equilibrium(GibbsT,

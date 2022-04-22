@@ -158,6 +158,8 @@ public:
     //arrays for read in IC profiles
     double *T_IC_h;
     double *P_IC_h;
+    const int n_pressures = 70;
+
 
     bool check_h;
 
