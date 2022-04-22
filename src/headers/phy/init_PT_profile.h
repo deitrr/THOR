@@ -1566,7 +1566,7 @@ void camembert_k2_18_IC_arrays(double *P_IC_h, double *T_IC_h, int n_pressures) 
   // }
 }
 
-double camember_k2_18b_interp(double P, double *P_IC_h, double *T_IC_h, int n_pressures) {
+double camembert_k2_18b_interp(double P, double *P_IC_h, double *T_IC_h, int n_pressures) {
   double T = 0;
   int i_lower = -1;
   //interpolation here!
