@@ -1576,7 +1576,7 @@ double camembert_k2_18b_interp(double P, double *P_IC_h, double *T_IC_h, int n_p
   } else if (P >= P_IC_h[n_pressures - 1]) {
     T = T_IC_h[n_pressures - 1]; //padding sides with isotherms
   } else {
-    for (int i; i < n_pressures - 1; i++) {
+    for (int i = 0; i < n_pressures - 1; i++) {
       if (P >= P_IC_h[i] && P < P_IC_h[i+1]){
         i_lower = i;
         break;
