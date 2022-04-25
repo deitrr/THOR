@@ -159,7 +159,8 @@ public:
     double *T_IC_h;
     double *P_IC_h;
     const int n_pressures = 70;
-
+    double *T_IC_d;
+    double *P_IC_d;
 
     bool check_h;
 

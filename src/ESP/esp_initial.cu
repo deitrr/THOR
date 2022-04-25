@@ -56,6 +56,7 @@
 #include "storage.h"
 
 #include "phy/init_PT_profile.h"
+#include "phy/camembert_case1.h"
 
 #include <map>
 #include <stdio.h>
@@ -335,6 +336,8 @@ __host__ void ESP::alloc_data(bool globdiag,
     if (core_benchmark == K2_18b_TF ){
       P_IC_h = (double *)malloc(n_pressures * sizeof(double));
       T_IC_h = (double *)malloc(n_pressures * sizeof(double));
+      cudaMalloc((void **)&P_IC_d, n_pressures*sizeof(double));
+      cudaMalloc((void **)&T_IC_d, n_pressures*sizeof(double));
     }
     // ultra hot
     cudaMalloc((void **)&Rd_d, nv * point_num * sizeof(double));
@@ -506,6 +509,8 @@ __host__ bool ESP::initial_values(const std::string &initial_conditions_filename
     if (sim.rest) {
         if (core_benchmark == K2_18b_TF){
           camembert_k2_18_IC_arrays(P_IC_h, T_IC_h, n_pressures);
+          cudaMemcpy(P_IC_d, P_IC_h, n_pressures*sizeof(double), cudaMemcpyHostToDevice);
+          cudaMemcpy(T_IC_d, T_IC_h, n_pressures*sizeof(double), cudaMemcpyHostToDevice);
         }
         for (int i = 0; i < 1; i++) {
             //

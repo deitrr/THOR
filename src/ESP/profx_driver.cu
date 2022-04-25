@@ -56,6 +56,8 @@
 #include "phy/profx_sponge.h"
 #include "phy/profx_tidalearth.h"
 #include "phy/ultrahot_thermo.h"
+#include "phy/camembert_case1.h"
+
 
 #include "binary_test.h"
 #include "debug_helpers.h"
@@ -358,6 +360,20 @@ __host__ void ESP::ProfX(const SimulationSetup& sim,
                             lonlat_d,
                             timestep,
                             point_num);
+    } else if (core_benchmark == K2_18b_TF) {
+        cudaDeviceSynchronize();
+        camembert_k2_18b_force(pressure_d,
+                               Rho_d,
+                               temperature_d,
+                               sim.Gravit,
+                               sim.Cp,
+                               sim.Rd,
+                               lonlat_d,
+                               P_IC_d,
+                               T_IC_d,
+                               time_step,
+                               n_pressures,
+                               point_num);
     }
     // else if (core_benchmark == ACOUSTIC_TEST) {
     //     if (current_step == 1) {
