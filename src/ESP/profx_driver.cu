@@ -371,7 +371,7 @@ __host__ void ESP::ProfX(const SimulationSetup& sim,
                                lonlat_d,
                                P_IC_d,
                                T_IC_d,
-                               time_step,
+                               timestep,
                                n_pressures,
                                point_num);
     }
