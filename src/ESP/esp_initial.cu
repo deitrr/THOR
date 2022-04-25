@@ -968,7 +968,7 @@ __host__ bool ESP::initial_values(const std::string &initial_conditions_filename
                         }
                         else {
                           if (core_benchmark == K2_18b_TF){
-                            temperature_h[i * nv + lev] = camembert_k2_18b_interp(pressure_h[i * nv + lev],
+                            temperature_h[i * nv + lev] = camembert_k2_18b_interp_init(pressure_h[i * nv + lev],
                                                                                   P_IC_h,
                                                                                   T_IC_h,
                                                                                   n_pressures);
