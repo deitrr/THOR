@@ -507,7 +507,11 @@ __host__ bool ESP::initial_values(const std::string &initial_conditions_filename
     double Rd_L, P_L, T_L, rho_L, alpha, r_int, l_int, g_L, g;
     if (sim.rest) {
         if (core_benchmark == K2_18b_TF){
-          camembert_k2_18_IC_arrays(P_IC_h, T_IC_h, n_pressures);
+          camembert_k2_18b_IC_arrays(P_IC_h, T_IC_h, n_pressures);
+          cudaMemcpy(P_IC_d, P_IC_h, n_pressures*sizeof(double), cudaMemcpyHostToDevice);
+          cudaMemcpy(T_IC_d, T_IC_h, n_pressures*sizeof(double), cudaMemcpyHostToDevice);
+        } else if (core_benchmark == GJ1214b_TF){
+          camembert_GJ1214b_IC_arrays(P_IC_h, T_IC_h, n_pressures);
           cudaMemcpy(P_IC_d, P_IC_h, n_pressures*sizeof(double), cudaMemcpyHostToDevice);
           cudaMemcpy(T_IC_d, T_IC_h, n_pressures*sizeof(double), cudaMemcpyHostToDevice);
         }
@@ -877,7 +881,7 @@ __host__ bool ESP::initial_values(const std::string &initial_conditions_filename
                             temperature_h[i * nv + lev] = sim.Tmean;
                         }
                         else {
-                            if (core_benchmark == K2_18b_TF){
+                            if ((core_benchmark == K2_18b_TF) || (core_benchmark == GJ1214b_TF)) {
                               temperature_h[i * nv + lev] = camembert_k2_18b_interp_init(sim.P_Ref,
                                                                                     P_IC_h,
                                                                                     T_IC_h, n_pressures);
@@ -967,7 +971,7 @@ __host__ bool ESP::initial_values(const std::string &initial_conditions_filename
                             temperature_h[i * nv + lev] = sim.Tmean;
                         }
                         else {
-                          if (core_benchmark == K2_18b_TF){
+                          if ((core_benchmark == K2_18b_TF) || (core_benchmark == GJ1214b_TF)){
                             temperature_h[i * nv + lev] = camembert_k2_18b_interp_init(pressure_h[i * nv + lev],
                                                                                   P_IC_h,
                                                                                   T_IC_h,

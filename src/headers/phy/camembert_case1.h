@@ -33,6 +33,7 @@ __global__ void camembert_k2_18b_force(double *pressure_d,
                                        double *lonlat_d,
                                        double *P_IC_d,
                                        double *T_IC_d,
+                                       double dTeqmax,
                                        double time_step,
                                        int n_pressures,
                                        int num) {
@@ -45,7 +46,7 @@ __global__ void camembert_k2_18b_force(double *pressure_d,
       double p = pressure_d[id*nv+lev], p_low_tau = 1e2, p_low_dT = 10, p_hi = 1e6;
       double tau_rad_H2, tau_rad;
       double mu = 8.31446261815324*1000/Rd;
-      double T0, Teq, dTeq, dTeqmax = 50, slope;
+      double T0, Teq, dTeq, slope;
       double lat = lonlat_d[id * 2 + 1];
       double lon = lonlat_d[id * 2];
 

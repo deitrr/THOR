@@ -372,9 +372,26 @@ __host__ void ESP::ProfX(const SimulationSetup& sim,
                                P_IC_d,
                                T_IC_d,
                                timestep,
+                               50.0,
+                               n_pressures,
+                               point_num);
+    } else if (core_benchmark == GJ1214b_TF) {
+        cudaDeviceSynchronize();
+        camembert_k2_18b_force<<<NB, NTH>>>(pressure_d,
+                               Rho_d,
+                               temperature_d,
+                               sim.Gravit,
+                               sim.Cp,
+                               sim.Rd,
+                               lonlat_d,
+                               P_IC_d,
+                               T_IC_d,
+                               timestep,
+                               600.0,
                                n_pressures,
                                point_num);
     }
+
     // else if (core_benchmark == ACOUSTIC_TEST) {
     //     if (current_step == 1) {
     //         acoustic_test<<<NB, NTH>>>(pressure_d,
