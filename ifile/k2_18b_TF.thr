@@ -64,7 +64,7 @@ P_ref = 10000000.0
 
 #-- Grid options -------------------------------------------------------------#
 # Altitude of the top of the model domain [m]
-Top_altitude = 1.125e6
+Top_altitude = 1.0e6
 
 # Horizontal resolution level.
 glevel = 4
