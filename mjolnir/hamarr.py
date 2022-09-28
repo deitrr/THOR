@@ -17,7 +17,7 @@ import os
 import h5py
 import time
 import subprocess as spr
-import pyshtools as chairs
+#import pyshtools as chairs
 import pdb
 
 import pathlib
