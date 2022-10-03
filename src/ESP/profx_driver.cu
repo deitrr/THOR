@@ -362,6 +362,7 @@ __host__ void ESP::ProfX(const SimulationSetup& sim,
                             point_num);
     } else if (core_benchmark == K2_18b_TF) {
         cudaDeviceSynchronize();
+        
         camembert_k2_18b_force<<<NB, NTH>>>(pressure_d,
                                Rho_d,
                                temperature_d,

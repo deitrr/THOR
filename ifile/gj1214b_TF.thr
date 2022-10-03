@@ -22,7 +22,7 @@ log_n_out = 1000
 
 # output directory (relative to current working directory)
 # defaults to 'results'
-results_path = k2_18b_TF
+results_path = gj1214b_TF
 
 # output global diagnostics (energy, mass, momentum, entropy)
 globdiag = true
@@ -38,22 +38,22 @@ output_mean = true
 
 #-- Planetary parameters -----------------------------------------------------#
 # name of simulation for output files
-simulation_ID = k218b
+simulation_ID = gj1214b
 
 # Radius [m]
-radius = 1.66e7
+radius = 1.75e7
 
 # Rotation rate [rad s^-1]
-rotation_rate = 2.21e-6
+rotation_rate = 4.603e-5
 
 # Gravitational acceleration [m/s^2]
-gravitation = 12.4
+gravitation = 10.7
 
 # Gas constant [J/(Kg K)]
-Rd =1732
+Rd = 3513
 
 # Specific heat capacities [J/(Kg K)]
-Cp = 6682
+Cp = 12000
 
 # Mean atmospheric temperature [K]
 Tmean = 1759
@@ -64,7 +64,7 @@ P_ref = 10000000.0
 
 #-- Grid options -------------------------------------------------------------#
 # Altitude of the top of the model domain [m]
-Top_altitude = 1.0e6
+Top_altitude = 3e6
 
 # Horizontal resolution level.
 glevel = 4
@@ -122,7 +122,7 @@ init_PT_profile = guillot
 # Acoustic wave test = AcousticTest
 # Gravity wave test = GWaveTest
 # No benchmark test == NoBenchmark (model is then forced with grey RT by default)
-core_benchmark =  K2_18b_TF
+core_benchmark =  GJ1214b_TF
 
 # Switch off dynamical core (gcm)
 # This is useful for testing/debugging physics modules

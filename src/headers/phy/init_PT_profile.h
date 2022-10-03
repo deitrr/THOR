@@ -1572,7 +1572,7 @@ void camembert_k2_18b_IC_arrays(double *P_IC_h, double *T_IC_h, int n_pressures)
 void camembert_GJ1214b_IC_arrays(double *P_IC_h, double *T_IC_h, int n_pressures) {
   std::string GJ1214b_filename("tools/CAMEMBERT_GJ1214b_IC.dat");
   FILE * infile;
-  int Nrows = 70;
+  int Nrows = 87;
   double dummy;
 
   infile = fopen(GJ1214b_filename.c_str(),"r");

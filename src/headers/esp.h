@@ -158,7 +158,9 @@ public:
     //arrays for read in IC profiles
     double *T_IC_h;
     double *P_IC_h;
-    const int n_pressures = 70;
+    const int n_pressures_k2_18b = 70;
+    const int n_pressures_gj1214b = 87;
+    int n_pressures;
     double *T_IC_d;
     double *P_IC_d;
 
