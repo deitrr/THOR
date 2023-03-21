@@ -169,7 +169,10 @@ __global__ void sponge_layer(double *M_d,
                              double *profx_dMh_d,
                              double *profx_dWh_d,
                              double *profx_dW_d,
-                             double *profx_Qheat_d) {
+                             double *profx_Qheat_d,
+                             double *sponge_dMh_d,
+                             double *sponge_dW_d,
+                             bool output_diffusion) {
     //
     //  Description:
     //
@@ -340,6 +343,12 @@ __global__ void sponge_layer(double *M_d,
                 vx = unew * (-sin(lon)) + vnew * (-sin(lonlat_d[id * 2 + 1]) * cos(lon));
                 vy = unew * (cos(lon)) + vnew * (-sin(lonlat_d[id * 2 + 1]) * sin(lon));
                 vz = vnew * (cos(lonlat_d[id * 2 + 1]));
+                if (output_diffusion) {
+                  sponge_dMh_d[id*nv*3+lev*3+0] = (vx*rho - M_d[id*nv*3+lev*3+0])/dt;
+                  sponge_dMh_d[id*nv*3+lev*3+1] = (vy*rho - M_d[id*nv*3+lev*3+1])/dt;
+                  sponge_dMh_d[id*nv*3+lev*3+2] = (vz*rho - M_d[id*nv*3+lev*3+2])/dt;
+                  sponge_dW_d[id*nv+lev] = (wnew*rho - W_d[id*nv+lev])/dt;
+                }
                 M_d[id * nv * 3 + lev * 3 + 0] = vx * rho;
                 M_d[id * nv * 3 + lev * 3 + 1] = vy * rho;
                 M_d[id * nv * 3 + lev * 3 + 2] = vz * rho;
@@ -377,6 +386,13 @@ __global__ void sponge_layer(double *M_d,
                 }
 
                 profx_dW_d[id * nv + lev] += dw * rho;
+
+                if (output_diffusion) {
+                  sponge_dMh_d[id*nv*3+lev*3+0] = vx*rho;
+                  sponge_dMh_d[id*nv*3+lev*3+1] = vy*rho;
+                  sponge_dMh_d[id*nv*3+lev*3+2] = vz*rho;
+                  sponge_dW_d[id*nv+lev] = wnew*rho;
+                }
             }
 
             if (temp_sponge) {

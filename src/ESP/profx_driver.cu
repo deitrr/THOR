@@ -189,7 +189,10 @@ __host__ void ESP::ProfX(const SimulationSetup& sim,
                                     profx_dMh_d,
                                     profx_dWh_d,
                                     profx_dW_d,
-                                    profx_Qheat_d);
+                                    profx_Qheat_d,
+                                    sponge_dMh_d,
+                                    sponge_dW_d,
+                                    output_diffusion);
 
         BENCH_POINT_I(
             current_step, "phy_Sponge", (), ("Rho_d", "pressure_d", "Mh_d", "Wh_d", "W_d"))
@@ -362,7 +365,7 @@ __host__ void ESP::ProfX(const SimulationSetup& sim,
                             point_num);
     } else if (core_benchmark == K2_18b_TF) {
         cudaDeviceSynchronize();
-        
+
         camembert_k2_18b_force<<<NB, NTH>>>(pressure_d,
                                Rho_d,
                                temperature_d,

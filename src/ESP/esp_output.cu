@@ -131,6 +131,8 @@ __host__ void ESP::copy_diff_to_host() {
     cudaMemcpy(diffwv_h, diffwv_d, point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
     cudaMemcpy(diffrv_h, diffrv_d, point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
     cudaMemcpy(diffprv_h, diffprv_d, point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(sponge_dMh_h, sponge_dMh_d, 3 * point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(sponge_dW_h, sponge_dW_d, point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
 }
 
 __host__ void ESP::output(int                    fidx, // Index of output file
@@ -380,6 +382,18 @@ __host__ void ESP::output(int                    fidx, // Index of output file
                        "/DivM",
                        "kg m^-2 s^-2",
                        "Horizontal Momentum Tendency from 3D divergence damping");
+
+        s.append_table(sponge_dMh_h,
+                       nv * point_num * 3,
+                       "/sponge_dMh",
+                       "kg m^-2 s^-2",
+                       "Horizontal momentum tendency from Rayleigh sponge");
+
+         s.append_table(sponge_dW_h,
+                        nv * point_num,
+                        "/sponge_dW",
+                        "kg m^-2 s^-2",
+                        "Vertical momentum tendency from Rayleigh sponge");
     }
 
     if (sim.out_interm_momentum == true) {

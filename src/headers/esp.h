@@ -143,6 +143,10 @@ public:
     double *diffwv_h;
     double *diffrv_h;
 
+    //sponge drag rates
+    double *sponge_dMh_h;
+    double *sponge_dW_h;
+
     double *flux_vec;
     double *boundary_flux_h;
     double *boundary_flux_d;
@@ -327,6 +331,10 @@ public:
     double *diffmv_d;
     double *diffwv_d;
     double *diffrv_d;
+
+    //sponge drag rates
+    double *sponge_dMh_h;
+    double *sponge_dW_h;
 
     double *diff_d;        //temporary array for diffusion calculation
     double *diff_sponge_d; //temporary array for diffusive sponge calculation

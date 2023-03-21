@@ -97,4 +97,7 @@ __global__ void sponge_layer(double *M_d,
                              double *profx_dMh_d,
                              double *profx_dWh_d,
                              double *profx_dW_d,
-                             double *profx_Qheat_d);
+                             double *profx_Qheat_d,
+                             double *sponge_dMh_d,
+                             double *sponge_dW_d,
+                             bool output_diffusion);

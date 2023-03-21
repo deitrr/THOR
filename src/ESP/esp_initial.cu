@@ -246,6 +246,11 @@ __host__ void ESP::alloc_data(bool globdiag,
         diffmv_h  = (double *)malloc(nv * point_num * 3 * sizeof(double));
         diffwv_h  = (double *)malloc(nv * point_num * sizeof(double));
         DivM_h    = (double *)malloc(nv * point_num * 3 * sizeof(double));
+
+        sponge_dMh_h = (double *)malloc(nv*point_num*3*sizeof(double));
+        sponge_dW_h = (double *)malloc(nv*point_num*sizeof(double));
+        cudaMalloc((void **)&sponge_dMh_d, 3 * nv * point_num * sizeof(double));
+        cudaMalloc((void **)&sponge_dW_d, nv * point_num * sizeof(double));
     }
 
     if (out_interm_momentum == true) {
