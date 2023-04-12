@@ -391,7 +391,7 @@ __global__ void sponge_layer(double *M_d,
                   sponge_dMh_d[id*nv*3+lev*3+0] = vx*rho;
                   sponge_dMh_d[id*nv*3+lev*3+1] = vy*rho;
                   sponge_dMh_d[id*nv*3+lev*3+2] = vz*rho;
-                  sponge_dW_d[id*nv+lev] = wnew*rho;
+                  sponge_dW_d[id*nv+lev] = dw*rho;
                 }
             }
 

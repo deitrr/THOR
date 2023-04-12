@@ -192,7 +192,7 @@ __host__ void ESP::ProfX(const SimulationSetup& sim,
                                     profx_Qheat_d,
                                     sponge_dMh_d,
                                     sponge_dW_d,
-                                    output_diffusion);
+                                    sim.output_diffusion);
 
         BENCH_POINT_I(
             current_step, "phy_Sponge", (), ("Rho_d", "pressure_d", "Mh_d", "Wh_d", "W_d"))

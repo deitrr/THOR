@@ -333,8 +333,8 @@ public:
     double *diffrv_d;
 
     //sponge drag rates
-    double *sponge_dMh_h;
-    double *sponge_dW_h;
+    double *sponge_dMh_d;
+    double *sponge_dW_d;
 
     double *diff_d;        //temporary array for diffusion calculation
     double *diff_sponge_d; //temporary array for diffusive sponge calculation

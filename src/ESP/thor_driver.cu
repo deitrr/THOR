@@ -857,7 +857,10 @@ __host__ void ESP::Thor(const SimulationSetup &sim, kernel_diagnostics &diag) {
                                         profx_dMh_d,
                                         profx_dWh_d,
                                         profx_dW_d,
-                                        profx_Qheat_d);
+                                        profx_Qheat_d,
+                                        sponge_dMh_d,
+                                        sponge_dW_d,
+                                        sim.output_diffusion);
 
             BENCH_POINT_I_S(current_step,
                             rk,
