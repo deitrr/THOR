@@ -13,7 +13,7 @@ timestep = 300
 
 # output
 # output every n steps
-n_out = 5760
+n_out = 14400    #every 50 days
 
 # write to log file at a different cadence from n_out
 custom_log_n_out = false
@@ -34,6 +34,7 @@ global_n_out = 1000
 
 # output time mean quantities (averaged over interval between outputs)
 output_mean = true
+output_diffusion = true
 
 
 #-- Planetary parameters -----------------------------------------------------#
