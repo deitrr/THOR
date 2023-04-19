@@ -252,6 +252,11 @@ __host__ void ESP::alloc_data(bool globdiag,
         cudaMalloc((void **)&sponge_dMh_d, 3 * nv * point_num * sizeof(double));
         cudaMalloc((void **)&sponge_dW_d, nv * point_num * sizeof(double));
     }
+    
+    if (core_benchmark == K2_18b_TF || core_benchmark == GJ1214b_TF){
+        TtendencyTF_h  = (double *)malloc(nv * point_num * sizeof(double));
+        cudaMalloc((void **)&TtendencyTF_d, nv * point_num * sizeof(double));
+    }
 
     if (out_interm_momentum == true) {
         Mh_start_dt_h  = (double *)malloc(nv * point_num * 3 * sizeof(double));

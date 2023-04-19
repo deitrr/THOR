@@ -27,6 +27,7 @@ __device__ double camembert_k2_18b_interp(double P, double *P_IC, double *T_IC, 
 __global__ void camembert_k2_18b_force(double *pressure_d,
                                        double *Rho_d,
                                        double *temperature_d,
+                                       double *TtendencyTF_d,
                                        double Gravit,
                                        double Cp,
                                        double Rd,
@@ -83,8 +84,13 @@ __global__ void camembert_k2_18b_force(double *pressure_d,
         Teq = T0 - 0.5*dTeq;
       }
 
+      double ttmp = temperature_d[id*nv+lev];
+
       temperature_d[id*nv+lev] = (Teq/tau_rad + temperature_d[id*nv+lev]/time_step) /
                                  (1.0/tau_rad + 1.0/time_step);
+      
+      //compute temperature tendency
+      TtendencyTF_d[id*nv+lev] = (temperature_d[id*nv+lev] - ttmp) / time_step;
    }
 
 }

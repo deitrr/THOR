@@ -213,6 +213,9 @@ public:
     // physics module Qheat, for output
     double *profx_Qheat_h;
 
+    //array for output of temperature tendency from TF simulations
+    double *TtendencyTF_h;
+
     // general variables related to surface
     bool    surface;
     double *Tsurface_d;
@@ -343,6 +346,9 @@ public:
     // double *diffv_d2;
     double *divg_Mh_d;
     bool *  check_d;
+
+    //array for output of temperature tendency from TF simulations
+    double *TtendencyTF_d;
 
     double *profx_Qheat_d;
     double *profx_dMh_d;

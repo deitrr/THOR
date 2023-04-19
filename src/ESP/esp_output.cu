@@ -72,6 +72,9 @@ __host__ void ESP::copy_globdiag_to_host() {
     if (surface) {
         cudaMemcpy(Esurf_h, Esurf_d, point_num * sizeof(double), cudaMemcpyDeviceToHost);
     }
+    if (core_benchmark == K2_18b_TF || core_benchmark == GJ1214b_TF){
+        cudaMemcpy(TtendencyTF_h, TtendencyTF_d, point_num * nv * sizeof(double), cudaMemcpyDeviceToHost);
+    }
 }
 
 __host__ void ESP::copy_global_to_host() {
@@ -332,6 +335,10 @@ __host__ void ESP::output(int                    fidx, // Index of output file
 
     //  Mh
     s.append_table(Mh_h, nv * point_num * 3, "/Mh", "kg m^-2 s^-1", "Horizontal Momentum");
+
+    if (core_benchmark == K2_18b_TF || core_benchmark == GJ1214b_TF){
+       s.append_table(TtendencyTF_h, nv * point_num, "/TtendencyTF", "K s^-1", "T tendency from temperature forcing");
+    }
 
     //  diffusion
     if (sim.output_diffusion == true) {
