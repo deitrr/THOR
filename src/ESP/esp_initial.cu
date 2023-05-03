@@ -1325,6 +1325,19 @@ __host__ bool ESP::initial_values(const std::string &initial_conditions_filename
                 // }
             }
         }
+        
+        if (core_benchmark == K2_18b_TF){
+          n_pressures = n_pressures_k2_18b;
+          camembert_k2_18b_IC_arrays(P_IC_h, T_IC_h, n_pressures);
+          cudaMemcpy(P_IC_d, P_IC_h, n_pressures*sizeof(double), cudaMemcpyHostToDevice);
+          cudaMemcpy(T_IC_d, T_IC_h, n_pressures*sizeof(double), cudaMemcpyHostToDevice);
+        } else if (core_benchmark == GJ1214b_TF){
+          n_pressures = n_pressures_gj1214b;
+          camembert_GJ1214b_IC_arrays(P_IC_h, T_IC_h, n_pressures);
+          cudaMemcpy(P_IC_d, P_IC_h, n_pressures*sizeof(double), cudaMemcpyHostToDevice);
+          cudaMemcpy(T_IC_d, T_IC_h, n_pressures*sizeof(double), cudaMemcpyHostToDevice);
+        }
+
     } //end if rest == false
 #ifdef BENCHMARKING
     // recompute temperature from pressure and density, to have correct rounding for binary comparison

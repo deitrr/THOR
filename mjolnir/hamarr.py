@@ -231,6 +231,18 @@ class output_new:
                 # add things to outputs dictionary that require checking for existence in openh5
                 if 'diffmh' in openh5.keys():
                     outputs['diffmh'] = 'diffmh'
+                    outputs['diffmv'] = 'diffmv'
+                    outputs['diffpr'] = 'diffpr'
+                    outputs['diffprv'] = 'diffprv'
+                    outputs['diffrh'] = 'diffrh'
+                    outputs['diffrv'] = 'diffrv'
+                    outputs['diffw'] = 'diffw'
+                    outputs['diffwv'] = 'diffwv'
+                    outputs['DivM'] = 'DivM'
+                    outputs['sponge_dMh'] = 'sponge_dMh'
+                    outputs['sponge_dW'] = 'sponge_dW'
+                if 'TtendencyTF' in openh5.keys():
+                    outputs['TtendencyTF'] = 'TtendencyTF'
                 if 'Qheat' in openh5.keys():
                     outputs['Qheat'] = 'qheat'
                 if 'DGQheat' in openh5.keys():
@@ -934,6 +946,19 @@ def regrid(resultsf, simID, ntsi, nts, pgrid_ref='auto', overwrite=False, comp=4
 
             if hasattr(output,'diffmh'):
                 source['diffmh'] = output.diffmh[:,:,:,0]
+                source['diffmv'] = output.diffmv[:,:,:,0]
+                source['diffpr'] = output.diffpr[:,:,0]
+                source['diffprv'] = output.diffprv[:,:,0]
+                source['diffrh'] = output.diffrh[:,:,0]
+                source['diffrv'] = output.diffrv[:,:,0]
+                source['diffw'] = output.diffw[:,:,0]
+                source['diffwv'] = output.diffwv[:,:,0]
+                source['DivM'] = output.DivM[:,:,:,0]
+                source['sponge_dMh'] = output.sponge_dMh[:,:,:,0]
+                source['sponge_dW'] = output.sponge_dW[:,:,0]
+
+            if hasattr(output,'TtendencyTF'):
+                source['TtendencyTF'] = output.TtendencyTF[:,:,0]
 
             if input.TSRT:
                 source['mustar'] = output.mustar[:, 0]
@@ -981,11 +1006,27 @@ def regrid(resultsf, simID, ntsi, nts, pgrid_ref='auto', overwrite=False, comp=4
                 source['diffmh_V'] = (-source['diffmh'][0]*np.sin(grid.lat[:,None])*np.cos(grid.lon[:,None])\
                           -source['diffmh'][1]*np.sin(grid.lat[:,None])*np.sin(grid.lon[:,None])\
                                + source['diffmh'][2]*np.cos(grid.lat[:, None]))/source['Rho']
+                source['diffmv_U'] = (-source['diffmv'][0]*np.sin(grid.lon[:,None])+\
+                               source['diffmv'][1]*np.cos(grid.lon[:, None]))/source['Rho']
+                source['diffmv_V'] = (-source['diffmv'][0]*np.sin(grid.lat[:,None])*np.cos(grid.lon[:,None])\
+                          -source['diffmv'][1]*np.sin(grid.lat[:,None])*np.sin(grid.lon[:,None])\
+                               + source['diffmv'][2]*np.cos(grid.lat[:, None]))/source['Rho']
+                source['DivM_U'] = (-source['DivM'][0]*np.sin(grid.lon[:,None])+\
+                               source['DivM'][1]*np.cos(grid.lon[:, None]))/source['Rho']
+                source['DivM_V'] = (-source['DivM'][0]*np.sin(grid.lat[:,None])*np.cos(grid.lon[:,None])\
+                          -source['DivM'][1]*np.sin(grid.lat[:,None])*np.sin(grid.lon[:,None])\
+                               + source['DivM'][2]*np.cos(grid.lat[:, None]))/source['Rho']
+                source['sponge_dMh_U'] = (-source['sponge_dMh'][0]*np.sin(grid.lon[:,None])+\
+                               source['sponge_dMh'][1]*np.cos(grid.lon[:, None]))/source['Rho']
+                source['sponge_dMh_V'] = (-source['sponge_dMh'][0]*np.sin(grid.lat[:,None])*np.cos(grid.lon[:,None])\
+                          -source['sponge_dMh'][1]*np.sin(grid.lat[:,None])*np.sin(grid.lon[:,None])\
+                               + source['sponge_dMh'][2]*np.cos(grid.lat[:, None]))/source['Rho']                
 
             # set up intermediate arrays (icogrid and pressure)
             interm = {}
             for key in source.keys():
-                if key == 'Mh' or key == 'Mh_mean' or key == 'diffmh':
+                #if key == 'Mh' or key == 'Mh_mean' or key == 'diffmh':
+                if key in ['Mh','Mh_mean','diffmh','diffmv','DivM','sponge_dMh']:
                     pass
                 elif np.shape(source[key]) == (grid.point_num,):
                     # 2D field (e.g., insolation) -> not needed
@@ -1031,7 +1072,8 @@ def regrid(resultsf, simID, ntsi, nts, pgrid_ref='auto', overwrite=False, comp=4
             # set up destination arrays (lat-lon and pressure/height)
             dest = {}
             for key in interm.keys():
-                if key == 'Mh' or key == 'Mh_mean' or key == 'Pressure' or key == 'diffmh':
+                #if key == 'Mh' or key == 'Mh_mean' or key == 'Pressure' or key == 'diffmh':
+                if key in ['Mh','Mh_mean','diffmh','diffmv','DivM','sponge_dMh', 'Pressure']:
                     pass  # don't need these any further
                 elif key == 'spectrum' or key == 'F_dir_BOA':
                     dest[key] = np.zeros((d_lon[0],d_lon[1],np.shape(output.wavelength)[0]))
@@ -1070,8 +1112,11 @@ def regrid(resultsf, simID, ntsi, nts, pgrid_ref='auto', overwrite=False, comp=4
                                         compression='gzip', compression_opts=comp)
             # data
             for key in dest.keys():
-                tmp_data = openh5.create_dataset(key, data=dest[key],
+                try:
+                    tmp_data = openh5.create_dataset(key, data=dest[key],
                                                  compression='gzip', compression_opts=comp)
+                except:
+                    pdb.set_trace()
             openh5.close()
 
             # create h5 files (height grid)
