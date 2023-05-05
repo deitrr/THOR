@@ -342,12 +342,12 @@ __host__ void ESP::alloc_data(bool globdiag,
         cudaMalloc((void **)&Rho_profx_d, nv * point_num * sizeof(double));
     }
 
-    if (core_benchmark == K2_18b_TF ){
+    if ((init_PT_profile == CAMK218) || (core_benchmark == K2_18b_TF) ){
       P_IC_h = (double *)malloc(n_pressures_k2_18b * sizeof(double));
       T_IC_h = (double *)malloc(n_pressures_k2_18b * sizeof(double));
       cudaMalloc((void **)&P_IC_d, n_pressures_k2_18b*sizeof(double));
       cudaMalloc((void **)&T_IC_d, n_pressures_k2_18b*sizeof(double));
-    } else if (core_benchmark == GJ1214b_TF){
+    } else if ((init_PT_profile == CAMGJ1214) || (core_benchmark == GJ1214b_TF)){
       P_IC_h = (double *)malloc(n_pressures_gj1214b * sizeof(double));
       T_IC_h = (double *)malloc(n_pressures_gj1214b * sizeof(double));
       cudaMalloc((void **)&P_IC_d, n_pressures_gj1214b*sizeof(double));

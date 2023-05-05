@@ -3,17 +3,16 @@
 config_version = 1
 
 
-
 #-- Time stepping and output options -----------------------------------------#
 # number of steps
-num_steps = 864000
+num_steps = 1152000
 
 # length of timesteps in seconds
 timestep = 300
 
 # output
 # output every n steps
-n_out = 14400     #every 50 days
+n_out = 14400
 
 # write to log file at a different cadence from n_out
 custom_log_n_out = false
@@ -22,7 +21,7 @@ log_n_out = 1000
 
 # output directory (relative to current working directory)
 # defaults to 'results'
-results_path = k2_18b_TF
+results_path = camembert_case3/gj1214b_case3
 
 # output global diagnostics (energy, mass, momentum, entropy)
 globdiag = true
@@ -34,26 +33,26 @@ global_n_out = 1000
 
 # output time mean quantities (averaged over interval between outputs)
 output_mean = true
-output_diffusion = true
+
 
 #-- Planetary parameters -----------------------------------------------------#
 # name of simulation for output files
-simulation_ID = k218b
+simulation_ID =  gj1214b
 
 # Radius [m]
-radius = 1.66e7
+radius = 1.75e7
 
 # Rotation rate [rad s^-1]
-rotation_rate = 2.21e-6
+rotation_rate = 4.603e-5
 
 # Gravitational acceleration [m/s^2]
-gravitation = 12.4
+gravitation = 10.7
 
 # Gas constant [J/(Kg K)]
-Rd =1732
+Rd = 3513
 
 # Specific heat capacities [J/(Kg K)]
-Cp = 6682
+Cp = 12000
 
 # Mean atmospheric temperature [K]
 Tmean = 1759
@@ -64,7 +63,7 @@ P_ref = 10000000.0
 
 #-- Grid options -------------------------------------------------------------#
 # Altitude of the top of the model domain [m]
-Top_altitude = 1.0e6
+Top_altitude = 3e6
 
 # Horizontal resolution level.
 glevel = 4
@@ -81,12 +80,6 @@ spring_beta = 1.15
 # use grid refinement in vertical for lower atmos
 vert_refined = false
 
-#lowest layer thickness (used with vert_refined = true) (meters)
-lowest_layer_thickness = 2
-
-#altitude to transition to linear spacing (used with vert_refined=true) (meters)
-transition_altitude = 1000
-
 
 #-- Model options ------------------------------------------------------------#
 # Non-hydrostatic parameter
@@ -102,7 +95,7 @@ rest = true
 # (path relative to current working directory)
 # defaults to 'ifile/esp_initial.h5'
 # 'planet' file must be present with name a la 'ifile/esp_initial_planet.h5'
-initial = ic_special/gen_ic_deep/esp_initial.h5
+initial = ic_special/gen_ic_wasp43b_ztop2p2/esp_initial.h5
 
 # initial temperature-pressure profile (isothermal or guillot)
 # overridden if rest = false !
@@ -112,7 +105,7 @@ initial = ic_special/gen_ic_deep/esp_initial.h5
 #    also uses the gray RT params Tint, kappa_lw, kappa_sw, f_lw
 #    includes the collision-induced absorption approx. from Heng+ 2011
 #    this can be omitted by setting f_lw = 1
-init_PT_profile = camk218
+init_PT_profile = camgj1214
 
 # Core benchmark tests
 # Held-Suarez test for Earth == HeldSuarez
@@ -122,14 +115,14 @@ init_PT_profile = camk218
 # Acoustic wave test = AcousticTest
 # Gravity wave test = GWaveTest
 # No benchmark test == NoBenchmark (model is then forced with grey RT by default)
-core_benchmark =  K2_18b_TF
+core_benchmark = NoBenchmark
 
 # Switch off dynamical core (gcm)
 # This is useful for testing/debugging physics modules
 gcm_off = false
 
 # use (dry) convective adjustment scheme
-conv_adj = false
+conv_adj = true
 
 # type of thermodynamic equation = "entropy" (ready) or "energy" (in development!!)
 thermo_equation = entropy
@@ -153,16 +146,19 @@ Diffc = 0.02
 
 # Strength of divergence damping
 DivDampc = 0.03
+
+VertHyDiff  = true
+Diffc_v = 0.00375
 #########################################################
 
 
-#-- Sponge layer (Rayleigh drag or diffusive sponge) ------------------------#
+#-- Sponge layer (Rayleigh drag or diffusive sponge) ----------------------#
 # use sponge layer (Rayleigh drag) at top of atmosphere?
-RayleighSponge = false
+RayleighSponge = true
 
 # use temperature sponge layer (Rayleigh drag) at top of atmosphere?
 # (not well tested!)
-RayleighSpongeT = false
+RayleighSpongeT = true
 
 # if true, damp to zonal mean (i.e., damp eddy component) (rayleigh sponge)
 # if false, damp to zero
@@ -180,6 +176,7 @@ ns_ray_sponge = 0.75
 Ruv_sponge = 1e-4
 # vertical component
 Rw_sponge = 1e-4
+RT_sponge = 1e-4
 
 # Technical setting: change how rayleigh sponge is applied
 # imp = implicitly update momentum in profx, averages computed once per dt
@@ -200,63 +197,19 @@ ns_diff_sponge = 0.75
 order_diff_sponge = 2
 
 
-#-- Radiative transfer options (core_benchmark = 0) --------------------------#
-## RT parameters #######################################
-radiative_transfer = false
-
-# stellar temperature (k)
-Tstar = 5800
+#-- Radiative transfer (double gray and two streams ) common options -------------------#
+# stellar temperature (K)
+Tstar = 3026.86
 
 # orbital distance or semi-major axis (au)
-planet_star_dist = 1
+planet_star_dist = 0.21561
 
 # radius of host star (R_sun)
-radius_star = 1
-
-# bond albedo of planet
-albedo = 0.3
-
-# diff_ang = 1/(diffusivity factor) for lw radiation
-diff_ang = 0.5
-
-# power law index of unmixed absorbers (lw and sw)
-# optical depth at P_ref is: tau_lw = (kappa_lw/(f_lw*g)) * P_ref
-# n_lw = 2 approximations collision-induced absorption
-# n_lw = 4 approximations water-vapor in Earth troposph.
-n_lw = 2
-
-# optical depth at P_ref is: tau_sw = (kappa_sw/g) * (P_ref)
-n_sw = 1
-
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# These params are also used if init_PT_profile = guillot
-# grey opacity of thermal wavelengths
-kappa_lw = 0.0025
-
-# grey opacity of incoming stellar flux
-kappa_sw = 0.00125
-
-# strength of unmixed absorbers in lw
-f_lw = 0.5
+radius_star = 0.21561
 
 # temperature of internal heat flux (bottom boundary) (K)
 Tint = 100
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-# add sin(lat)^2 dependence to tau lw (advanced)
-latf_lw = true
-# opacity at poles (lw)
-kappa_lw_pole = 0.0025
-
-# include surface heating
-surface = false
-# heat capacity of surface
-Csurf = 1e7
-
-# run gray RT code without GCM, every column identical zenith angle (experimental!)
-rt1Dmode = false
-
-#########################################################
 
 ## insolation (orbit + spin-state) parameters ###########
 # synchronous rotation (tidally-locking at 1:1)
@@ -282,32 +235,155 @@ sync_rot = true
 #longp = 0
 #########################################################
 
+#-- Radiative transfer (gray) options (core_benchmark = NoBenchmark) -------------------#
+## RT parameters #######################################
+radiative_transfer = false
+
+# bond albedo of planet
+albedo = 0.18
+
+# diff_ang = 1/(diffusivity factor) for lw radiation
+diff_ang = 0.5
+
+# power law index of unmixed absorbers (lw and sw)
+# tau_lw = f_lw * (kappa_lw/g) * P/P_ref
+#          + (1-f_lw) * (kappa_lw/g) * (P/P_ref)^n_lw
+# n_lw = 2 approximations collision-induced absorption
+# n_lw = 4 approximations water-vapor in Earth troposph.
+n_lw = 2
+
+# tau_sw = (kappa_sw/g) * (P/P_ref)^n_sw
+n_sw = 1
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# These params are also used if init_PT_profile = guillot
+# grey opacity of thermal wavelengths
+kappa_lw = 0.0025
+
+# grey opacity of incoming stellar flux
+kappa_sw = 0.00125
+
+# strength of unmixed absorbers in lw
+f_lw = 0.5
+
+# Tint
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+# add sin(lat)^2 dependence to tau lw (advanced)
+latf_lw = false
+# opacity at poles (lw)
+kappa_lw_pole = 0.0025
+
+# include surface heating
+surface = false
+# heat capacity of surface
+Csurf = 1e7
+
+# run gray RT code without GCM, every column identical zenith angle (experimental!)
+rt1Dmode = false
+
+#########################################################
+# spin up and spin down start and stop. Set to negative value to ignore and run at full power
+# spins up/down with a multiplication factor following a sine from 0 to 1 from
+# start to stop of spin up time
+dgrt_spinup_start = 0
+dgrt_spinup_stop = 143999
+dgrt_spindown_start = 144000
+dgrt_spindown_stop = 172800
+
+
+#-- Alfrodull options --------------------------------------------------------#
+# also uses variables from general config and radiative transfer:
+# * Tstar: star temperature (if not using a stellar spectrum)
+# * Tint: internal temperature
+# * planet_star_dist
+# * radius_star
+# * ... insolation stuff
+#
+
+two_streams_radiative_transfer = true
+
+# Isothermal or non-isothermal treatment of layers for two stream RT
+Alf_iso = false
+
+# use real star spectrum or planck spectrum
+Alf_real_star = true
+# if using real star, give stellar spectrum here
+Alf_stellar_spectrum = ./Alfrodull/input/stellar_spectrum_gj1214_kl35.h5
+
+# fake opacity when hitting opacity limit.
+Alf_fake_opac = 0.0
+
+# asymmetry factor
+# (values: [-1, 1]. 0: isotropic scattering. 1: pure forward, -1: pure backward.)
+Alf_g_0 = 0.0
+
+# scattering
+Alf_scat = true
+# scattering correction
+Alf_scat_corr = false
+
+# direct irradiation beam
+Alf_dir_beam = true
+
+# transition in w0. only above this value I2S is used.
+Alf_i2s_transition = 0.1
+
+Alf_opacities_file = ./Alfrodull/input/kl35_gj1214b_mix/mixed_opac_ktable_si.h5
+#Alf_opacities_file = ./Alfrodull/input/opac_sample_r500.h5
+#Alf_opacities_file = ./Alfrodull/input/opac_sample_r50.h5
+# set to true to use opacities file in CGS, output from HELIOS
+Alf_opacities_file_in_CGS = false
+
+# clouds
+Alf_clouds = false
+Alf_fcloud = 1e-17
+Alf_cloudfile = ./Alfrodull/input/clouds_enstatite_kn30.h5
+
+# store w0 and g0 per wavelength (optional, to avoid storing a giant amount of data
+Alf_store_w0_g0 = false
+
+# limit in degree of direct beam, if angle of incoming beam is smaller than that
+# to horizontal, set direct beam to 0.0.
+Alf_direct_beam_angle_limit = 1.0
+
+# compute radiative transfer every n step
+Alf_compute_every_nstep = 1
+
+# number of columns to compute in parallel
+# (Adjust this depending on memory usage, more parallel column: faster integration)
+# Total number of points on grid is 4^(glevel - 4)*16^2*10 + 2.
+Alf_num_parallel_columns = 1281
+
+# debug output
+# enables various informational outputs for debugging
+Alf_debug = false
+
+#########################################################
+# spin up and spin down start and stop.
+# This represents the step number where spinup/-down starts and ends.
+# Set to negative value to ignore and run at full power
+# spins up/down with a multiplication factor following a sine from 0 to 1 from
+# start to stop of spin up time and a sine from 1 to 0 for spin down
+# can be used in parallel with double grey radiative transfer above for faster spinup
+Alf_spinup_start = -1
+Alf_spinup_stop = -1
+Alf_spindown_start = -1
+Alf_spindown_stop = -1
+
 
 #-- Boundary layer options (core_benchmark = NoBenchmark) --------------------#
 boundary_layer = false
 
-# type of boundary layer drag ('RayleighHS' or 'LocalMixL')
+# type of boundary layer drag
 bl_type = RayleighHS
 
-# strength of drag (bl_type = RayleighHS)
+# strength of drag
 #surf_drag = 1.157407e-5
 
 # boundary layer sigma (drag exist at this % of surface pressure and above)
-# (bl_type = RayleighHS)
 #bl_sigma = 0.7
 
-# surface roughness length (meters) (bl_type = LocalMixL)
-#z_rough = 3.21e-5
-
-# asymptotic scale length (ASL) for BL (meters) (bl_type = LocalMixL)
-#abl_asym_len = 150
-
-# asymptotic scale length (ASL) for free atmos (meters) (bl_type = LocalMixL)
-#free_asym_len = 30
-
-# height to transition from BL to free atmos for ASL (meters) (bl_type = LocalMixL)
-# set to -1 to use abl_asym_len in entire atmosphere
-#asl_transition_height = -1
 
 #-- Device options -----------------------------------------------------------#
 # GPU ID number

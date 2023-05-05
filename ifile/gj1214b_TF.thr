@@ -113,7 +113,7 @@ initial = ic_special/gen_ic_deep/esp_initial.h5
 #    also uses the gray RT params Tint, kappa_lw, kappa_sw, f_lw
 #    includes the collision-induced absorption approx. from Heng+ 2011
 #    this can be omitted by setting f_lw = 1
-init_PT_profile = guillot
+init_PT_profile = camgj1214
 
 # Core benchmark tests
 # Held-Suarez test for Earth == HeldSuarez
