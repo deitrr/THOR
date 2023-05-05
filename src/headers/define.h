@@ -162,7 +162,7 @@ enum benchmark_types {
 };
 
 
-enum init_PT_profile_types { ISOTHERMAL = 0, GUILLOT = 1, CONSTBV = 2, PARMENTIER = 3 };
+enum init_PT_profile_types { ISOTHERMAL = 0, GUILLOT = 1, CONSTBV = 2, PARMENTIER = 3, CAMGJ1214 = 4, CAMK218 = 5 };
 
 enum uh_thermo_types { NO_UH_THERMO = 0, VARY_R_CP = 1, FULL = 2 };
 

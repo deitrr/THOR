@@ -680,6 +680,14 @@ int main(int argc, char** argv) {
         init_PT_profile = CONSTBV;
         config_OK &= true;
     }
+    else if (init_PT_profile_str == "camgj1214") {
+        init_PT_profile = CAMGJ1214;
+        config_OK &= true;
+    }
+    else if (init_PT_profile_str == "camk218") {
+        init_PT_profile = CAMK218;
+        config_OK &= true;
+    }
     else {
         log::printf("init_PT_profile config item not recognised: [%s]\n",
                     init_PT_profile_str.c_str());
